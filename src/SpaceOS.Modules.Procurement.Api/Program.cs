@@ -18,6 +18,7 @@ var app = builder.Build();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapProcurementEndpoints();
+app.MapInternalEndpoints();
 app.Run();
 
 public partial class Program { }

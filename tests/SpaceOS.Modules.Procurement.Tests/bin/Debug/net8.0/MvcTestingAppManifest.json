@@ -1,7 +1,0 @@
-{
-  "SpaceOS.Modules.Procurement.Api, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "\/opt\/spaceos\/spaceos-modules-procurement\/src\/SpaceOS.Modules.Procurement.Api",
-  "SpaceOS.Modules.Procurement.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "\/opt\/spaceos\/spaceos-modules-procurement\/src\/SpaceOS.Modules.Procurement.Application",
-  "SpaceOS.Modules.Procurement.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "\/opt\/spaceos\/spaceos-modules-procurement\/src\/SpaceOS.Modules.Procurement.Contracts",
-  "SpaceOS.Modules.Procurement.Domain, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "\/opt\/spaceos\/spaceos-modules-procurement\/src\/SpaceOS.Modules.Procurement.Domain",
-  "SpaceOS.Modules.Procurement.Infrastructure, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "\/opt\/spaceos\/spaceos-modules-procurement\/src\/SpaceOS.Modules.Procurement.Infrastructure"
-}

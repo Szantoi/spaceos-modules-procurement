@@ -41,6 +41,23 @@ public class ProcurementRepository : IProcurementRepository
     public async Task AddDeliveryAsync(Delivery delivery, CancellationToken ct = default)
         => await _db.Deliveries.AddAsync(delivery, ct).ConfigureAwait(false);
 
+    public async Task<TenantDeletedCounts> DeleteAllByTenantAsync(Guid tenantId, CancellationToken ct = default)
+    {
+        var deliveries = await _db.Deliveries
+            .Where(d => d.TenantId == tenantId)
+            .ToListAsync(ct).ConfigureAwait(false);
+        _db.Deliveries.RemoveRange(deliveries);
+
+        var orders = await _db.PurchaseOrders
+            .Where(o => o.TenantId == tenantId)
+            .ToListAsync(ct).ConfigureAwait(false);
+        _db.PurchaseOrders.RemoveRange(orders);
+
+        await _db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        return new TenantDeletedCounts(orders.Count, deliveries.Count);
+    }
+
     public async Task SaveChangesAsync(CancellationToken ct = default)
         => await _db.SaveChangesAsync(ct).ConfigureAwait(false);
 }
