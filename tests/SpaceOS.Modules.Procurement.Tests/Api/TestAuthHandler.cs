@@ -18,7 +18,7 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
         var claims = new[]
         {
             new Claim(ClaimTypes.Name, "testuser"),
-            new Claim("tenant_id", TestTenantId.ToString()),
+            new Claim("tid", TestTenantId.ToString()),
             new Claim(ClaimTypes.Role, "Manufacturer")
         };
         var identity = new ClaimsIdentity(claims, "Test");

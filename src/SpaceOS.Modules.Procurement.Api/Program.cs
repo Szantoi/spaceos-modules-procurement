@@ -5,7 +5,7 @@ using SpaceOS.Modules.Procurement.Infrastructure.Extensions;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddProcurementApplication();
-builder.Services.AddAuthentication().AddJwtBearer();
+builder.Services.AddAuthentication().AddJwtBearer(opts => { opts.MapInboundClaims = false; });
 builder.Services.AddAuthorization(opts =>
     opts.AddPolicy("ManufacturerOnly", p => p.RequireAuthenticatedUser()));
 

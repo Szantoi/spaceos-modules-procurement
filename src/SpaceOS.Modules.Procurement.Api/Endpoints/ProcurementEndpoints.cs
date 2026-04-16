@@ -89,7 +89,7 @@ public static class ProcurementEndpoints
 
     private static Guid GetTenantId(HttpContext ctx)
     {
-        var claim = ctx.User?.FindFirst("tenant_id")?.Value;
+        var claim = ctx.User?.FindFirst("tid")?.Value;
         return Guid.TryParse(claim, out var id) ? id : Guid.Empty;
     }
 }
