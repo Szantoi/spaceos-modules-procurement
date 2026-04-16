@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "dgSpecHash": "w1Z/SvXRPqk=",
+  "success": true,
+  "projectFilePath": "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Application/SpaceOS.Modules.Procurement.Application.csproj",
+  "expectedPackageFiles": [
+    "/home/gabor/.nuget/packages/ardalis.result/10.1.0/ardalis.result.10.1.0.nupkg.sha512",
+    "/home/gabor/.nuget/packages/fluentvalidation/12.1.1/fluentvalidation.12.1.1.nupkg.sha512",
+    "/home/gabor/.nuget/packages/mediatr/12.4.1/mediatr.12.4.1.nupkg.sha512",
+    "/home/gabor/.nuget/packages/mediatr.contracts/2.0.1/mediatr.contracts.2.0.1.nupkg.sha512",
+    "/home/gabor/.nuget/packages/microsoft.extensions.dependencyinjection.abstractions/8.0.0/microsoft.extensions.dependencyinjection.abstractions.8.0.0.nupkg.sha512",
+    "/home/gabor/.nuget/packages/spaceos.modules.inventory.contracts/1.1.0/spaceos.modules.inventory.contracts.1.1.0.nupkg.sha512"
+  ],
+  "logs": []
+}

@@ -1,0 +1,15 @@
+/opt/spaceos/spaceos-modules-cutting/src/SpaceOS.Modules.Procurement.Contracts/bin/Release/net8.0/SpaceOS.Modules.Procurement.Contracts.deps.json
+/opt/spaceos/spaceos-modules-cutting/src/SpaceOS.Modules.Procurement.Contracts/bin/Release/net8.0/SpaceOS.Modules.Procurement.Contracts.dll
+/opt/spaceos/spaceos-modules-cutting/src/SpaceOS.Modules.Procurement.Contracts/bin/Release/net8.0/SpaceOS.Modules.Procurement.Contracts.pdb
+/opt/spaceos/spaceos-modules-cutting/src/SpaceOS.Modules.Procurement.Contracts/bin/Release/net8.0/SpaceOS.Modules.Inventory.Contracts.dll
+/opt/spaceos/spaceos-modules-cutting/src/SpaceOS.Modules.Procurement.Contracts/bin/Release/net8.0/SpaceOS.Modules.Inventory.Contracts.pdb
+/opt/spaceos/spaceos-modules-cutting/src/SpaceOS.Modules.Procurement.Contracts/obj/Release/net8.0/SpaceOS.Modules.Procurement.Contracts.csproj.AssemblyReference.cache
+/opt/spaceos/spaceos-modules-cutting/src/SpaceOS.Modules.Procurement.Contracts/obj/Release/net8.0/SpaceOS.Modules.Procurement.Contracts.GeneratedMSBuildEditorConfig.editorconfig
+/opt/spaceos/spaceos-modules-cutting/src/SpaceOS.Modules.Procurement.Contracts/obj/Release/net8.0/SpaceOS.Modules.Procurement.Contracts.AssemblyInfoInputs.cache
+/opt/spaceos/spaceos-modules-cutting/src/SpaceOS.Modules.Procurement.Contracts/obj/Release/net8.0/SpaceOS.Modules.Procurement.Contracts.AssemblyInfo.cs
+/opt/spaceos/spaceos-modules-cutting/src/SpaceOS.Modules.Procurement.Contracts/obj/Release/net8.0/SpaceOS.Modules.Procurement.Contracts.csproj.CoreCompileInputs.cache
+/opt/spaceos/spaceos-modules-cutting/src/SpaceOS.Modules.Procurement.Contracts/obj/Release/net8.0/SpaceOS..F82963A2.Up2Date
+/opt/spaceos/spaceos-modules-cutting/src/SpaceOS.Modules.Procurement.Contracts/obj/Release/net8.0/SpaceOS.Modules.Procurement.Contracts.dll
+/opt/spaceos/spaceos-modules-cutting/src/SpaceOS.Modules.Procurement.Contracts/obj/Release/net8.0/refint/SpaceOS.Modules.Procurement.Contracts.dll
+/opt/spaceos/spaceos-modules-cutting/src/SpaceOS.Modules.Procurement.Contracts/obj/Release/net8.0/SpaceOS.Modules.Procurement.Contracts.pdb
+/opt/spaceos/spaceos-modules-cutting/src/SpaceOS.Modules.Procurement.Contracts/obj/Release/net8.0/ref/SpaceOS.Modules.Procurement.Contracts.dll

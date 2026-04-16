@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+  <metadata>
+    <id>SpaceOS.Modules.Procurement.Contracts</id>
+    <version>1.0.0</version>
+    <authors>SpaceOS</authors>
+    <description>Package Description</description>
+    <repository type="git" />
+    <dependencies>
+      <group targetFramework="net8.0">
+        <dependency id="SpaceOS.Modules.Inventory.Contracts" version="1.0.0" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="/opt/spaceos/spaceos-modules-cutting/src/SpaceOS.Modules.Procurement.Contracts/bin/Release/net8.0/SpaceOS.Modules.Procurement.Contracts.dll" target="lib/net8.0/SpaceOS.Modules.Procurement.Contracts.dll" />
+  </files>
+</package>

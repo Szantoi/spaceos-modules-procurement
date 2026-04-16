@@ -1,0 +1,39 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "SpaceOS.Modules.Procurement.Contracts/1.0.0": {
+        "dependencies": {
+          "SpaceOS.Modules.Inventory.Contracts": "1.1.0"
+        },
+        "runtime": {
+          "SpaceOS.Modules.Procurement.Contracts.dll": {}
+        }
+      },
+      "SpaceOS.Modules.Inventory.Contracts/1.1.0": {
+        "runtime": {
+          "SpaceOS.Modules.Inventory.Contracts.dll": {
+            "assemblyVersion": "1.1.0",
+            "fileVersion": "1.1.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "SpaceOS.Modules.Procurement.Contracts/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "SpaceOS.Modules.Inventory.Contracts/1.1.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

@@ -1,0 +1,3 @@
+﻿<Project>
+  <Import Project="../buildMultiTargeting/SpaceOS.Modules.Procurement.Api.props" />
+</Project>

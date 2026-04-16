@@ -1,0 +1,407 @@
+{
+  "format": 1,
+  "restore": {
+    "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Api/SpaceOS.Modules.Procurement.Api.csproj": {}
+  },
+  "projects": {
+    "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Api/SpaceOS.Modules.Procurement.Api.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Api/SpaceOS.Modules.Procurement.Api.csproj",
+        "projectName": "SpaceOS.Modules.Procurement.Api",
+        "projectPath": "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Api/SpaceOS.Modules.Procurement.Api.csproj",
+        "packagesPath": "/home/gabor/.nuget/packages/",
+        "outputPath": "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Api/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/opt/spaceos/spaceos-modules-procurement/NuGet.Config",
+          "/home/gabor/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "/opt/spaceos/spaceos-modules-cutting/nupkg": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Application/SpaceOS.Modules.Procurement.Application.csproj": {
+                "projectPath": "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Application/SpaceOS.Modules.Procurement.Application.csproj"
+              },
+              "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Infrastructure/SpaceOS.Modules.Procurement.Infrastructure.csproj": {
+                "projectPath": "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Infrastructure/SpaceOS.Modules.Procurement.Infrastructure.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Ardalis.Result": {
+              "target": "Package",
+              "version": "[10.1.0, )"
+            },
+            "MediatR": {
+              "target": "Package",
+              "version": "[12.4.1, )"
+            },
+            "Microsoft.AspNetCore.Authentication.JwtBearer": {
+              "target": "Package",
+              "version": "[8.0.11, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.AspNetCore.App": {
+              "privateAssets": "none"
+            },
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/opt/dotnet/sdk/8.0.419/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Application/SpaceOS.Modules.Procurement.Application.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Application/SpaceOS.Modules.Procurement.Application.csproj",
+        "projectName": "SpaceOS.Modules.Procurement.Application",
+        "projectPath": "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Application/SpaceOS.Modules.Procurement.Application.csproj",
+        "packagesPath": "/home/gabor/.nuget/packages/",
+        "outputPath": "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Application/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/opt/spaceos/spaceos-modules-procurement/NuGet.Config",
+          "/home/gabor/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "/opt/spaceos/spaceos-modules-cutting/nupkg": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Domain/SpaceOS.Modules.Procurement.Domain.csproj": {
+                "projectPath": "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Domain/SpaceOS.Modules.Procurement.Domain.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Ardalis.Result": {
+              "target": "Package",
+              "version": "[10.1.0, )"
+            },
+            "FluentValidation": {
+              "target": "Package",
+              "version": "[12.1.1, )"
+            },
+            "MediatR": {
+              "target": "Package",
+              "version": "[12.4.1, )"
+            },
+            "SpaceOS.Modules.Inventory.Contracts": {
+              "target": "Package",
+              "version": "[1.1.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/opt/dotnet/sdk/8.0.419/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Contracts/SpaceOS.Modules.Procurement.Contracts.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Contracts/SpaceOS.Modules.Procurement.Contracts.csproj",
+        "projectName": "SpaceOS.Modules.Procurement.Contracts",
+        "projectPath": "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Contracts/SpaceOS.Modules.Procurement.Contracts.csproj",
+        "packagesPath": "/home/gabor/.nuget/packages/",
+        "outputPath": "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Contracts/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/opt/spaceos/spaceos-modules-procurement/NuGet.Config",
+          "/home/gabor/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "/opt/spaceos/spaceos-modules-cutting/nupkg": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "SpaceOS.Modules.Inventory.Contracts": {
+              "target": "Package",
+              "version": "[1.1.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/opt/dotnet/sdk/8.0.419/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Domain/SpaceOS.Modules.Procurement.Domain.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Domain/SpaceOS.Modules.Procurement.Domain.csproj",
+        "projectName": "SpaceOS.Modules.Procurement.Domain",
+        "projectPath": "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Domain/SpaceOS.Modules.Procurement.Domain.csproj",
+        "packagesPath": "/home/gabor/.nuget/packages/",
+        "outputPath": "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Domain/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/opt/spaceos/spaceos-modules-procurement/NuGet.Config",
+          "/home/gabor/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "/opt/spaceos/spaceos-modules-cutting/nupkg": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Ardalis.Result": {
+              "target": "Package",
+              "version": "[10.1.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/opt/dotnet/sdk/8.0.419/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Infrastructure/SpaceOS.Modules.Procurement.Infrastructure.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Infrastructure/SpaceOS.Modules.Procurement.Infrastructure.csproj",
+        "projectName": "SpaceOS.Modules.Procurement.Infrastructure",
+        "projectPath": "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Infrastructure/SpaceOS.Modules.Procurement.Infrastructure.csproj",
+        "packagesPath": "/home/gabor/.nuget/packages/",
+        "outputPath": "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Infrastructure/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/opt/spaceos/spaceos-modules-procurement/NuGet.Config",
+          "/home/gabor/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "/opt/spaceos/spaceos-modules-cutting/nupkg": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Application/SpaceOS.Modules.Procurement.Application.csproj": {
+                "projectPath": "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Application/SpaceOS.Modules.Procurement.Application.csproj"
+              },
+              "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Contracts/SpaceOS.Modules.Procurement.Contracts.csproj": {
+                "projectPath": "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Contracts/SpaceOS.Modules.Procurement.Contracts.csproj"
+              },
+              "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Domain/SpaceOS.Modules.Procurement.Domain.csproj": {
+                "projectPath": "/opt/spaceos/spaceos-modules-procurement/src/SpaceOS.Modules.Procurement.Domain/SpaceOS.Modules.Procurement.Domain.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Ardalis.Result": {
+              "target": "Package",
+              "version": "[10.1.0, )"
+            },
+            "MediatR": {
+              "target": "Package",
+              "version": "[12.4.1, )"
+            },
+            "Microsoft.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[8.0.11, )"
+            },
+            "Microsoft.EntityFrameworkCore.Design": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[8.0.11, )"
+            },
+            "Npgsql.EntityFrameworkCore.PostgreSQL": {
+              "target": "Package",
+              "version": "[8.0.11, )"
+            },
+            "SpaceOS.Modules.Inventory.Contracts": {
+              "target": "Package",
+              "version": "[1.1.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.AspNetCore.App": {
+              "privateAssets": "none"
+            },
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/opt/dotnet/sdk/8.0.419/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}
