@@ -14,12 +14,17 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         string connectionString)
     {
-        services.AddDbContext<ProcurementDbContext>(options =>
+        services.AddHttpContextAccessor();
+        services.AddSingleton<TenantSessionInterceptor>();
+
+        services.AddDbContext<ProcurementDbContext>((sp, options) =>
+        {
             options.UseNpgsql(connectionString, npg =>
-                npg.MigrationsHistoryTable("__EFMigrationsHistory", "spaceos_procurement")));
+                npg.MigrationsHistoryTable("__EFMigrationsHistory", "spaceos_procurement"));
+            options.AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>());
+        });
 
         services.AddScoped<IProcurementRepository, ProcurementRepository>();
-        services.AddHttpContextAccessor();
         services.AddScoped<IProcurementTenantAccessor, HttpContextProcurementTenantAccessor>();
         services.AddScoped<IProcurementProvider, ProcurementProviderAdapter>();
 
