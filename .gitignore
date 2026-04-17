@@ -1,0 +1,10 @@
+bin/
+obj/
+nupkg/
+*.user
+.vs/
+.claude/
+
+# Build artifacts
+publish/
+publish.bak*/
