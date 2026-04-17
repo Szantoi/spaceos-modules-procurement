@@ -1,6 +1,7 @@
 using SpaceOS.Modules.Procurement.Api.Endpoints;
 using SpaceOS.Modules.Procurement.Api.Extensions;
 using SpaceOS.Modules.Procurement.Infrastructure.Extensions;
+using SpaceOS.Modules.Procurement.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +18,13 @@ builder.Services.AddProcurementInfrastructure(connectionString);
 var app = builder.Build();
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapGet("/healthz", () => Results.Ok("healthy")).AllowAnonymous();
+app.MapGet("/health/ready", async (ProcurementDbContext db) =>
+{
+    await db.Database.CanConnectAsync();
+    return Results.Ok("ready");
+}).AllowAnonymous();
+
 app.MapProcurementEndpoints();
 app.MapInternalEndpoints();
 app.Run();
