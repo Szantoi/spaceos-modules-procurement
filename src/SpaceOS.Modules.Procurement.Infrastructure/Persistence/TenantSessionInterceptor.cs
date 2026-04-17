@@ -18,7 +18,13 @@ internal sealed class TenantSessionInterceptor : DbConnectionInterceptor
         CancellationToken ct)
     {
         var tenantId = ResolveTenantId();
-        await SetConfigAsync(connection, PgConfigKey, tenantId ?? string.Empty, ct).ConfigureAwait(false);
+        if (string.IsNullOrWhiteSpace(tenantId))
+        {
+            await base.ConnectionOpenedAsync(connection, eventData, ct).ConfigureAwait(false);
+            return;
+        }
+
+        await SetConfigAsync(connection, PgConfigKey, tenantId, ct).ConfigureAwait(false);
         await base.ConnectionOpenedAsync(connection, eventData, ct).ConfigureAwait(false);
     }
 
