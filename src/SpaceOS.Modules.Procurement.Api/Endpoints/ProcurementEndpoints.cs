@@ -3,9 +3,11 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using SpaceOS.Modules.Procurement.Application.Commands.CreatePurchaseOrder;
+using SpaceOS.Modules.Procurement.Application.Commands.CreateSupplier;
 using SpaceOS.Modules.Procurement.Application.Commands.RecordDelivery;
 using SpaceOS.Modules.Procurement.Application.Queries.GetOrderStatus;
 using SpaceOS.Modules.Procurement.Application.Queries.GetSupplierPrices;
+using SpaceOS.Modules.Procurement.Application.Queries.GetSuppliers;
 
 namespace SpaceOS.Modules.Procurement.Api.Endpoints;
 
@@ -15,12 +17,42 @@ public static class ProcurementEndpoints
     {
         var group = app.MapGroup("/api/procurement").RequireAuthorization("ManufacturerOnly");
 
+        group.MapPost("/suppliers", CreateSupplier);
+        group.MapGet("/suppliers", GetSuppliers);
         group.MapPost("/orders", CreatePurchaseOrder);
         group.MapGet("/orders/{id:guid}", GetOrderStatus);
         group.MapGet("/prices", GetSupplierPrices);
         group.MapPost("/deliveries", RecordDelivery);
 
         return app;
+    }
+
+    private static async Task<IResult> CreateSupplier(
+        CreateSupplierRequest request,
+        IMediator mediator,
+        HttpContext ctx,
+        CancellationToken ct)
+    {
+        var tenantId = GetTenantId(ctx);
+        if (tenantId == Guid.Empty) return Results.Unauthorized();
+
+        var command = new CreateSupplierCommand(tenantId, request.Name, request.ContactEmail ?? string.Empty);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return result.IsSuccess
+            ? Results.Created($"/api/procurement/suppliers/{result.Value.Id}", result.Value)
+            : Results.BadRequest(result.Errors);
+    }
+
+    private static async Task<IResult> GetSuppliers(
+        IMediator mediator,
+        HttpContext ctx,
+        CancellationToken ct)
+    {
+        var tenantId = GetTenantId(ctx);
+        if (tenantId == Guid.Empty) return Results.Unauthorized();
+
+        var result = await mediator.Send(new GetSuppliersQuery(tenantId), ct).ConfigureAwait(false);
+        return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Errors);
     }
 
     private static async Task<IResult> CreatePurchaseOrder(
@@ -93,6 +125,8 @@ public static class ProcurementEndpoints
         return Guid.TryParse(claim, out var id) ? id : Guid.Empty;
     }
 }
+
+public sealed record CreateSupplierRequest(string Name, string? ContactEmail, string? Notes);
 
 public sealed record CreatePurchaseOrderRequest(
     Guid SupplierId,

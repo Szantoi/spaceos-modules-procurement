@@ -14,11 +14,12 @@ public class Supplier : AggregateRoot
 
     private Supplier() { }
 
-    public static Supplier Create(Guid tenantId, string name, string contactEmail, int leadTimeDays, decimal rating)
+    public DateTime CreatedAt { get; private set; }
+
+    public static Supplier Create(Guid tenantId, string name, string contactEmail = "", int leadTimeDays = 0, decimal rating = 0m)
     {
         if (tenantId == Guid.Empty) throw new ArgumentException("TenantId required.", nameof(tenantId));
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        ArgumentException.ThrowIfNullOrWhiteSpace(contactEmail);
         if (leadTimeDays < 0) throw new ArgumentException("LeadTimeDays cannot be negative.", nameof(leadTimeDays));
         if (rating < 0 || rating > 5) throw new ArgumentException("Rating must be between 0 and 5.", nameof(rating));
 
@@ -27,10 +28,11 @@ public class Supplier : AggregateRoot
             Id = Guid.NewGuid(),
             TenantId = tenantId,
             Name = name,
-            ContactEmail = contactEmail,
+            ContactEmail = contactEmail ?? string.Empty,
             LeadTimeDays = leadTimeDays,
             Rating = rating,
-            IsActive = true
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
         };
     }
 

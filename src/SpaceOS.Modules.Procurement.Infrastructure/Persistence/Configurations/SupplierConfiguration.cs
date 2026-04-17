@@ -12,10 +12,11 @@ public class SupplierConfiguration : IEntityTypeConfiguration<Supplier>
         builder.HasKey(x => x.Id);
         builder.Property(x => x.TenantId).IsRequired();
         builder.Property(x => x.Name).HasMaxLength(200).IsRequired();
-        builder.Property(x => x.ContactEmail).HasMaxLength(200).IsRequired();
+        builder.Property(x => x.ContactEmail).HasMaxLength(200).IsRequired(false);
         builder.Property(x => x.LeadTimeDays).IsRequired();
         builder.Property(x => x.Rating).HasPrecision(3, 1);
         builder.Property(x => x.IsActive).IsRequired();
+        builder.Property(x => x.CreatedAt).IsRequired();
         builder.HasIndex(x => new { x.TenantId, x.IsActive });
     }
 }

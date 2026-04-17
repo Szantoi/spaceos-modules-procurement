@@ -12,9 +12,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using SpaceOS.Modules.Procurement.Api.Endpoints;
 using SpaceOS.Modules.Procurement.Application.Commands.CreatePurchaseOrder;
+using SpaceOS.Modules.Procurement.Application.Commands.CreateSupplier;
 using SpaceOS.Modules.Procurement.Application.Commands.RecordDelivery;
 using SpaceOS.Modules.Procurement.Application.Queries.GetOrderStatus;
 using SpaceOS.Modules.Procurement.Application.Queries.GetSupplierPrices;
+using SpaceOS.Modules.Procurement.Application.Queries.GetSuppliers;
 using SpaceOS.Modules.Inventory.Contracts.Providers;
 using Xunit;
 
@@ -235,5 +237,58 @@ public class ProcurementEndpointsTests
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         mediatorMock.Verify(m => m.Send(It.IsAny<RecordDeliveryCommand>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateSupplier_WithAuth_Returns201()
+    {
+        var supplierId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        var mediatorMock = new Mock<IMediator>();
+        mediatorMock.Setup(m => m.Send(It.IsAny<CreateSupplierCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<CreateSupplierResult>.Success(
+                new CreateSupplierResult(supplierId, "Faanyag Kft.", TestAuthHandler.TestTenantId, now)));
+
+        var client = CreateAuthClient(mediatorMock);
+        var payload = new { Name = "Faanyag Kft.", ContactEmail = "info@faanyag.hu", Notes = (string?)null };
+
+        var response = await client.PostAsJsonAsync("/api/procurement/suppliers", payload);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
+    [Fact]
+    public async Task CreateSupplier_OptionalContactEmail_Returns201()
+    {
+        var mediatorMock = new Mock<IMediator>();
+        mediatorMock.Setup(m => m.Send(It.IsAny<CreateSupplierCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<CreateSupplierResult>.Success(
+                new CreateSupplierResult(Guid.NewGuid(), "No-Email Supplier", TestAuthHandler.TestTenantId, DateTime.UtcNow)));
+
+        var client = CreateAuthClient(mediatorMock);
+        var payload = new { Name = "No-Email Supplier" };
+
+        var response = await client.PostAsJsonAsync("/api/procurement/suppliers", payload);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
+    [Fact]
+    public async Task GetSuppliers_WithAuth_Returns200WithList()
+    {
+        var mediatorMock = new Mock<IMediator>();
+        mediatorMock.Setup(m => m.Send(It.IsAny<GetSuppliersQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<IReadOnlyList<SupplierResponse>>.Success(
+                new List<SupplierResponse>
+                {
+                    new(Guid.NewGuid(), "Faanyag Kft.", "info@faanyag.hu", 5, 4.5m, DateTime.UtcNow)
+                }));
+
+        var client = CreateAuthClient(mediatorMock);
+        var response = await client.GetAsync("/api/procurement/suppliers");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<List<object>>();
+        body.Should().HaveCount(1);
     }
 }
