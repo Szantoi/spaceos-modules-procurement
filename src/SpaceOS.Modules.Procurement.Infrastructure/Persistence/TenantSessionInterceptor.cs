@@ -33,6 +33,10 @@ internal sealed class TenantSessionInterceptor : DbConnectionInterceptor
         ConnectionEventData eventData,
         InterceptionResult result)
     {
+        var tenantId = ResolveTenantId();
+        if (string.IsNullOrWhiteSpace(tenantId))
+            return await base.ConnectionClosingAsync(connection, eventData, result).ConfigureAwait(false);
+
         await SetConfigAsync(connection, PgConfigKey, string.Empty, CancellationToken.None).ConfigureAwait(false);
         return await base.ConnectionClosingAsync(connection, eventData, result).ConfigureAwait(false);
     }
