@@ -72,20 +72,29 @@ public static class InternalEndpoints
 
             var tenantGuid = Guid.Parse(tenantId);
 
-            // Set tenant GUC manually — no Bearer token in internal calls, so TenantSessionInterceptor
-            // would set app.current_tenant_id = '' causing PostgreSQL 22P02 UUID cast failure.
             // Resolve DbContext from request scope (not via parameter — DELETE has no body inference).
             var dbContext = ctx.RequestServices.GetRequiredService<ProcurementDbContext>();
-            // Only execute on a real relational DB — InMemory provider (tests) skips this.
-            if (dbContext.Database.IsRelational())
-            {
-                var tenantIdStr = tenantGuid.ToString();
-                await dbContext.Database.ExecuteSqlAsync(
-                    $"SELECT set_config('app.current_tenant_id', {tenantIdStr}, false)", ct)
-                    .ConfigureAwait(false);
-            }
 
-            var counts = await repo.DeleteAllByTenantAsync(tenantGuid, ct).ConfigureAwait(false);
+            // Pin set_config and DeleteAllByTenantAsync to the same physical connection so the
+            // GUC value is not lost when the pool returns a different connection for the repo call.
+            if (dbContext.Database.IsRelational())
+                await dbContext.Database.OpenConnectionAsync(ct).ConfigureAwait(false);
+
+            TenantDeletedCounts counts;
+            try
+            {
+                if (dbContext.Database.IsRelational())
+                    await dbContext.Database.ExecuteSqlRawAsync(
+                        "SELECT set_config('app.current_tenant_id', {0}, false)",
+                        tenantGuid.ToString()).ConfigureAwait(false);
+
+                counts = await repo.DeleteAllByTenantAsync(tenantGuid, ct).ConfigureAwait(false);
+            }
+            finally
+            {
+                if (dbContext.Database.IsRelational())
+                    await dbContext.Database.CloseConnectionAsync().ConfigureAwait(false);
+            }
 
             logger.LogInformation(
                 "InternalDeleteByTenant: tenant {TenantId} reset — deleted {Orders} orders, {Deliveries} deliveries",
