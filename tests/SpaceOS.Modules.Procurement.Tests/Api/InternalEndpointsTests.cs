@@ -6,11 +6,13 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using SpaceOS.Modules.Procurement.Api.Endpoints;
 using SpaceOS.Modules.Procurement.Domain.Interfaces;
+using SpaceOS.Modules.Procurement.Infrastructure.Persistence;
 using Xunit;
 
 namespace SpaceOS.Modules.Procurement.Tests.Api;
@@ -29,6 +31,8 @@ public class InternalEndpointsTests
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Services.AddSingleton(repoMock.Object);
+        builder.Services.AddDbContext<ProcurementDbContext>(opts =>
+            opts.UseInMemoryDatabase($"procurement-internal-test-{Guid.NewGuid()}"));
         builder.Services.AddAuthentication("NoAuth")
             .AddScheme<AuthenticationSchemeOptions, NoAuthHandler>("NoAuth", _ => { });
         builder.Services.AddAuthorization();

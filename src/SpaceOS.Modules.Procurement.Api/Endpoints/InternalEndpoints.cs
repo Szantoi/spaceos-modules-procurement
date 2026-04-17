@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SpaceOS.Modules.Procurement.Domain.Interfaces;
+using SpaceOS.Modules.Procurement.Infrastructure.Persistence;
 
 namespace SpaceOS.Modules.Procurement.Api.Endpoints;
 
@@ -68,6 +71,20 @@ public static class InternalEndpoints
             }
 
             var tenantGuid = Guid.Parse(tenantId);
+
+            // Set tenant GUC manually — no Bearer token in internal calls, so TenantSessionInterceptor
+            // would set app.current_tenant_id = '' causing PostgreSQL 22P02 UUID cast failure.
+            // Resolve DbContext from request scope (not via parameter — DELETE has no body inference).
+            var dbContext = ctx.RequestServices.GetRequiredService<ProcurementDbContext>();
+            // Only execute on a real relational DB — InMemory provider (tests) skips this.
+            if (dbContext.Database.IsRelational())
+            {
+                var tenantIdStr = tenantGuid.ToString();
+                await dbContext.Database.ExecuteSqlAsync(
+                    $"SELECT set_config('app.current_tenant_id', {tenantIdStr}, false)", ct)
+                    .ConfigureAwait(false);
+            }
+
             var counts = await repo.DeleteAllByTenantAsync(tenantGuid, ct).ConfigureAwait(false);
 
             logger.LogInformation(
