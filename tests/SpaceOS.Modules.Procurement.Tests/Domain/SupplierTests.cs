@@ -11,7 +11,7 @@ public class SupplierTests
     [Fact]
     public void Create_WithValidData_ShouldBeActive()
     {
-        var supplier = Supplier.Create(TenantId, "Acme Boards", "acme@example.com", "", 5, 4.5m);
+        var supplier = Supplier.Create(TenantId, "Acme Boards", "acme@example.com", "", "", 5, 4.5m);
         supplier.IsActive.Should().BeTrue();
         supplier.Id.Should().NotBeEmpty();
         supplier.Name.Should().Be("Acme Boards");
@@ -20,7 +20,7 @@ public class SupplierTests
     [Fact]
     public void Deactivate_ShouldSetIsActiveFalse()
     {
-        var supplier = Supplier.Create(TenantId, "Acme Boards", "acme@example.com", "", 5, 4.5m);
+        var supplier = Supplier.Create(TenantId, "Acme Boards", "acme@example.com", "", "", 5, 4.5m);
         supplier.Deactivate();
         supplier.IsActive.Should().BeFalse();
     }
@@ -28,14 +28,14 @@ public class SupplierTests
     [Fact]
     public void Create_WithEmptyTenantId_ShouldThrow()
     {
-        var act = () => Supplier.Create(Guid.Empty, "Acme", "acme@e.com", "", 5, 4m);
+        var act = () => Supplier.Create(Guid.Empty, "Acme", "acme@e.com", "", "", 5, 4m);
         act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_WithInvalidRating_ShouldThrow()
     {
-        var act = () => Supplier.Create(TenantId, "Acme", "acme@e.com", "", 5, 6m);
+        var act = () => Supplier.Create(TenantId, "Acme", "acme@e.com", "", "", 5, 6m);
         act.Should().Throw<ArgumentException>();
     }
 

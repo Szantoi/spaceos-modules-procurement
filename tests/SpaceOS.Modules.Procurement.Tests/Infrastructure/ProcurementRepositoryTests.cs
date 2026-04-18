@@ -23,7 +23,7 @@ public class ProcurementRepositoryTests : IDisposable
         _db = new ProcurementDbContext(options);
         _repo = new ProcurementRepository(_db);
 
-        var supplier = Supplier.Create(_tenantId, "Test Supplier", "test@supplier.com", "", 7, 4.0m);
+        var supplier = Supplier.Create(_tenantId, "Test Supplier", "test@supplier.com", "", "", 7, 4.0m);
         _supplierId = supplier.Id;
         _db.Suppliers.Add(supplier);
         _db.SaveChanges();
@@ -32,7 +32,7 @@ public class ProcurementRepositoryTests : IDisposable
     [Fact]
     public async Task AddSupplier_ShouldPersist()
     {
-        var supplier = Supplier.Create(_tenantId, "New Supplier", "new@supplier.com", "", 3, 3.5m);
+        var supplier = Supplier.Create(_tenantId, "New Supplier", "new@supplier.com", "", "", 3, 3.5m);
         await _repo.AddSupplierAsync(supplier);
         await _repo.SaveChangesAsync();
 
@@ -44,7 +44,7 @@ public class ProcurementRepositoryTests : IDisposable
     [Fact]
     public async Task GetActiveSuppliers_ShouldReturnOnlyActive()
     {
-        var inactive = Supplier.Create(_tenantId, "Inactive", "inactive@s.com", "", 10, 2m);
+        var inactive = Supplier.Create(_tenantId, "Inactive", "inactive@s.com", "", "", 10, 2m);
         inactive.Deactivate();
         await _repo.AddSupplierAsync(inactive);
         await _repo.SaveChangesAsync();
@@ -75,8 +75,8 @@ public class ProcurementRepositoryTests : IDisposable
         var tenantA = Guid.NewGuid();
         var tenantB = Guid.NewGuid();
 
-        var supplierA = Supplier.Create(tenantA, "SA", "sa@s.com", "", 1, 5m);
-        var supplierB = Supplier.Create(tenantB, "SB", "sb@s.com", "", 1, 5m);
+        var supplierA = Supplier.Create(tenantA, "SA", "sa@s.com", "", "", 1, 5m);
+        var supplierB = Supplier.Create(tenantB, "SB", "sb@s.com", "", "", 1, 5m);
         await _repo.AddSupplierAsync(supplierA);
         await _repo.AddSupplierAsync(supplierB);
 
@@ -158,8 +158,8 @@ public class ProcurementRepositoryTests : IDisposable
         var tenantA = Guid.NewGuid();
         var tenantB = Guid.NewGuid();
 
-        var sA = Supplier.Create(tenantA, "SA2", "sa2@s.com", "", 5, 4m);
-        var sB = Supplier.Create(tenantB, "SB2", "sb2@s.com", "", 5, 4m);
+        var sA = Supplier.Create(tenantA, "SA2", "sa2@s.com", "", "", 5, 4m);
+        var sB = Supplier.Create(tenantB, "SB2", "sb2@s.com", "", "", 5, 4m);
         await _repo.AddSupplierAsync(sA);
         await _repo.AddSupplierAsync(sB);
         await _repo.SaveChangesAsync();

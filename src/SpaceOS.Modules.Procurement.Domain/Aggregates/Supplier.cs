@@ -9,6 +9,7 @@ public class Supplier : AggregateRoot
     public string Name { get; private set; } = string.Empty;
     public string Email { get; private set; } = string.Empty;
     public string Phone { get; private set; } = string.Empty;
+    public string Address { get; private set; } = string.Empty;
     public int LeadTimeDays { get; private set; }
     public decimal Rating { get; private set; }
     public bool IsActive { get; private set; }
@@ -16,7 +17,7 @@ public class Supplier : AggregateRoot
 
     private Supplier() { }
 
-    public static Supplier Create(Guid tenantId, string name, string email = "", string phone = "", int leadTimeDays = 0, decimal rating = 0m)
+    public static Supplier Create(Guid tenantId, string name, string email = "", string phone = "", string address = "", int leadTimeDays = 0, decimal rating = 0m)
     {
         if (tenantId == Guid.Empty) throw new ArgumentException("TenantId required.", nameof(tenantId));
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -30,6 +31,7 @@ public class Supplier : AggregateRoot
             Name = name,
             Email = email ?? string.Empty,
             Phone = phone ?? string.Empty,
+            Address = address ?? string.Empty,
             LeadTimeDays = leadTimeDays,
             Rating = rating,
             IsActive = true,
