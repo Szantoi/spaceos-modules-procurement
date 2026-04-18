@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Routing;
 using SpaceOS.Modules.Procurement.Application.Commands.CreatePurchaseOrder;
 using SpaceOS.Modules.Procurement.Application.Commands.CreateSupplier;
 using SpaceOS.Modules.Procurement.Application.Commands.RecordDelivery;
+using SpaceOS.Modules.Procurement.Application.Queries.GetOrders;
 using SpaceOS.Modules.Procurement.Application.Queries.GetOrderStatus;
 using SpaceOS.Modules.Procurement.Application.Queries.GetSupplierPrices;
 using SpaceOS.Modules.Procurement.Application.Queries.GetSuppliers;
@@ -19,12 +20,25 @@ public static class ProcurementEndpoints
 
         group.MapPost("/suppliers", CreateSupplier);
         group.MapGet("/suppliers", GetSuppliers);
+        group.MapGet("/orders", GetOrders);
         group.MapPost("/orders", CreatePurchaseOrder);
         group.MapGet("/orders/{id:guid}", GetOrderStatus);
         group.MapGet("/prices", GetSupplierPrices);
         group.MapPost("/deliveries", RecordDelivery);
 
         return app;
+    }
+
+    private static async Task<IResult> GetOrders(
+        IMediator mediator,
+        HttpContext ctx,
+        CancellationToken ct)
+    {
+        var tenantId = GetTenantId(ctx);
+        if (tenantId == Guid.Empty) return Results.Unauthorized();
+
+        var result = await mediator.Send(new GetOrdersQuery(tenantId), ct).ConfigureAwait(false);
+        return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Errors);
     }
 
     private static async Task<IResult> CreateSupplier(

@@ -14,6 +14,7 @@ using SpaceOS.Modules.Procurement.Api.Endpoints;
 using SpaceOS.Modules.Procurement.Application.Commands.CreatePurchaseOrder;
 using SpaceOS.Modules.Procurement.Application.Commands.CreateSupplier;
 using SpaceOS.Modules.Procurement.Application.Commands.RecordDelivery;
+using SpaceOS.Modules.Procurement.Application.Queries.GetOrders;
 using SpaceOS.Modules.Procurement.Application.Queries.GetOrderStatus;
 using SpaceOS.Modules.Procurement.Application.Queries.GetSupplierPrices;
 using SpaceOS.Modules.Procurement.Application.Queries.GetSuppliers;
@@ -290,5 +291,40 @@ public class ProcurementEndpointsTests
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<List<object>>();
         body.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task GetOrders_WithAuth_Returns200WithList()
+    {
+        var mediatorMock = new Mock<IMediator>();
+        mediatorMock.Setup(m => m.Send(It.IsAny<GetOrdersQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<IReadOnlyList<PurchaseOrderListResponse>>.Success(
+                new List<PurchaseOrderListResponse>
+                {
+                    new(Guid.NewGuid(), "Faanyag Kft.", 200_000m, null, "Submitted", DateTime.UtcNow)
+                }));
+
+        var client = CreateAuthClient(mediatorMock);
+        var response = await client.GetAsync("/api/procurement/orders");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<List<object>>();
+        body.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task GetOrders_EmptyTenant_Returns200EmptyList()
+    {
+        var mediatorMock = new Mock<IMediator>();
+        mediatorMock.Setup(m => m.Send(It.IsAny<GetOrdersQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<IReadOnlyList<PurchaseOrderListResponse>>.Success(
+                new List<PurchaseOrderListResponse>()));
+
+        var client = CreateAuthClient(mediatorMock);
+        var response = await client.GetAsync("/api/procurement/orders");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<List<object>>();
+        body.Should().BeEmpty();
     }
 }
