@@ -247,10 +247,10 @@ public class ProcurementEndpointsTests
         var mediatorMock = new Mock<IMediator>();
         mediatorMock.Setup(m => m.Send(It.IsAny<CreateSupplierCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<CreateSupplierResult>.Success(
-                new CreateSupplierResult(supplierId, "Faanyag Kft.", TestAuthHandler.TestTenantId, now)));
+                new CreateSupplierResult(supplierId, "Faanyag Kft.", TestAuthHandler.TestTenantId, "info@faanyag.hu", "+36 1 234 5678", now)));
 
         var client = CreateAuthClient(mediatorMock);
-        var payload = new { Name = "Faanyag Kft.", ContactEmail = "info@faanyag.hu", Notes = (string?)null };
+        var payload = new { Name = "Faanyag Kft.", Email = "info@faanyag.hu", Phone = "+36 1 234 5678", Notes = (string?)null };
 
         var response = await client.PostAsJsonAsync("/api/procurement/suppliers", payload);
 
@@ -263,7 +263,7 @@ public class ProcurementEndpointsTests
         var mediatorMock = new Mock<IMediator>();
         mediatorMock.Setup(m => m.Send(It.IsAny<CreateSupplierCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<CreateSupplierResult>.Success(
-                new CreateSupplierResult(Guid.NewGuid(), "No-Email Supplier", TestAuthHandler.TestTenantId, DateTime.UtcNow)));
+                new CreateSupplierResult(Guid.NewGuid(), "No-Email Supplier", TestAuthHandler.TestTenantId, "", "", DateTime.UtcNow)));
 
         var client = CreateAuthClient(mediatorMock);
         var payload = new { Name = "No-Email Supplier" };
@@ -281,7 +281,7 @@ public class ProcurementEndpointsTests
             .ReturnsAsync(Result<IReadOnlyList<SupplierResponse>>.Success(
                 new List<SupplierResponse>
                 {
-                    new(Guid.NewGuid(), "Faanyag Kft.", "info@faanyag.hu", 5, 4.5m, DateTime.UtcNow)
+                    new(Guid.NewGuid(), "Faanyag Kft.", "info@faanyag.hu", "+36 1 234 5678", 5, 4.5m, DateTime.UtcNow)
                 }));
 
         var client = CreateAuthClient(mediatorMock);

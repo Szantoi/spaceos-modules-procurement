@@ -6,6 +6,7 @@ namespace SpaceOS.Modules.Procurement.Application.Commands.CreateSupplier;
 public sealed record CreateSupplierCommand(
     Guid TenantId,
     string Name,
-    string ContactEmail) : IRequest<Result<CreateSupplierResult>>;
+    string Email,
+    string Phone) : IRequest<Result<CreateSupplierResult>>;
 
-public sealed record CreateSupplierResult(Guid Id, string Name, Guid TenantId, DateTime CreatedAt);
+public sealed record CreateSupplierResult(Guid Id, string Name, Guid TenantId, string Email, string Phone, DateTime CreatedAt);

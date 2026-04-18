@@ -36,7 +36,7 @@ public static class ProcurementEndpoints
         var tenantId = GetTenantId(ctx);
         if (tenantId == Guid.Empty) return Results.Unauthorized();
 
-        var command = new CreateSupplierCommand(tenantId, request.Name, request.ContactEmail ?? string.Empty);
+        var command = new CreateSupplierCommand(tenantId, request.Name, request.Email ?? string.Empty, request.Phone ?? string.Empty);
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
         return result.IsSuccess
             ? Results.Created($"/api/procurement/suppliers/{result.Value.Id}", result.Value)
@@ -126,7 +126,7 @@ public static class ProcurementEndpoints
     }
 }
 
-public sealed record CreateSupplierRequest(string Name, string? ContactEmail, string? Notes);
+public sealed record CreateSupplierRequest(string Name, string? Email, string? Phone, string? Notes);
 
 public sealed record CreatePurchaseOrderRequest(
     Guid SupplierId,

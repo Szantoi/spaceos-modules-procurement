@@ -18,7 +18,7 @@ public sealed class GetSuppliersQueryHandler : IRequestHandler<GetSuppliersQuery
         var suppliers = await _repository.GetActiveSuppliersByTenantAsync(request.TenantId, ct).ConfigureAwait(false);
 
         var response = suppliers
-            .Select(s => new SupplierResponse(s.Id, s.Name, s.ContactEmail, s.LeadTimeDays, s.Rating, s.CreatedAt))
+            .Select(s => new SupplierResponse(s.Id, s.Name, s.Email, s.Phone, s.LeadTimeDays, s.Rating, s.CreatedAt))
             .ToList();
 
         return Result<IReadOnlyList<SupplierResponse>>.Success(response);

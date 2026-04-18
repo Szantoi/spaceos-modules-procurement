@@ -16,12 +16,12 @@ public sealed class CreateSupplierCommandHandler : IRequestHandler<CreateSupplie
 
     public async Task<Result<CreateSupplierResult>> Handle(CreateSupplierCommand request, CancellationToken ct)
     {
-        var supplier = Supplier.Create(request.TenantId, request.Name, request.ContactEmail);
+        var supplier = Supplier.Create(request.TenantId, request.Name, request.Email, request.Phone);
 
         await _repository.AddSupplierAsync(supplier, ct).ConfigureAwait(false);
         await _repository.SaveChangesAsync(ct).ConfigureAwait(false);
 
         return Result<CreateSupplierResult>.Success(
-            new CreateSupplierResult(supplier.Id, supplier.Name, supplier.TenantId, supplier.CreatedAt));
+            new CreateSupplierResult(supplier.Id, supplier.Name, supplier.TenantId, supplier.Email, supplier.Phone, supplier.CreatedAt));
     }
 }
