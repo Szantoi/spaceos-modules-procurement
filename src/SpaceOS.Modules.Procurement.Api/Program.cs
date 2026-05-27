@@ -1,12 +1,43 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using SpaceOS.Modules.Procurement.Api.Endpoints;
 using SpaceOS.Modules.Procurement.Api.Extensions;
 using SpaceOS.Modules.Procurement.Infrastructure.Extensions;
 using SpaceOS.Modules.Procurement.Infrastructure.Persistence;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddProcurementApplication();
-builder.Services.AddAuthentication().AddJwtBearer(opts => { opts.MapInboundClaims = false; });
+
+var jwtAuthority = builder.Configuration["Jwt:Authority"]
+    ?? Environment.GetEnvironmentVariable("JWT_AUTHORITY");
+var jwtAudience = builder.Configuration["Jwt:Audience"]
+    ?? Environment.GetEnvironmentVariable("JWT_AUDIENCE")
+    ?? "kernel-api";
+
+if (builder.Environment.IsProduction())
+    ArgumentNullException.ThrowIfNullOrEmpty(jwtAuthority,
+        "Jwt:Authority / JWT_AUTHORITY must be configured");
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(opts =>
+    {
+        opts.MapInboundClaims = false;
+        opts.Authority = jwtAuthority;
+        opts.Audience = jwtAudience;
+        opts.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+        opts.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer   = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ClockSkew        = TimeSpan.FromSeconds(30),
+            NameClaimType    = "preferred_username",
+            RoleClaimType    = ClaimTypes.Role,
+        };
+    });
+
 builder.Services.AddAuthorization(opts =>
     opts.AddPolicy("ManufacturerOnly", p => p.RequireAuthenticatedUser()));
 
