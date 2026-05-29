@@ -135,6 +135,7 @@ public static class InternalEndpoints
                 return Results.UnprocessableEntity(new { error = "Unprocessable", message = "MaterialCode is required" });
 
             var mediator = ctx.RequestServices.GetRequiredService<IMediator>();
+            var dbContext = ctx.RequestServices.GetRequiredService<ProcurementDbContext>();
 
             var command = new ReorderAlertReceiverCommand(
                 request.TenantId,
@@ -146,15 +147,30 @@ public static class InternalEndpoints
                 request.UnitOfMeasure ?? "pcs",
                 request.AlertedAt);
 
+            // DB-P-07: pin GUC to this connection so RETURNING sees the inserted row (RLS USING check).
+            // Same pattern as the delete-by-tenant endpoint above.
+            if (dbContext.Database.IsRelational())
+                await dbContext.Database.OpenConnectionAsync(ct).ConfigureAwait(false);
+
             ReorderAlertReceiverResult result;
             try
             {
+                if (dbContext.Database.IsRelational())
+                    await dbContext.Database.ExecuteSqlRawAsync(
+                        "SELECT set_config('app.current_tenant_id', {0}, false)",
+                        request.TenantId.ToString()).ConfigureAwait(false);
+
                 result = await mediator.Send(command, ct).ConfigureAwait(false);
             }
             catch (InvalidOperationException ex) when (ex.Message.Contains("MaterialCode"))
             {
                 // SEC-P-10: orphan materialCode → 422 (not 5xx)
                 return Results.UnprocessableEntity(new { error = "Unprocessable", message = ex.Message });
+            }
+            finally
+            {
+                if (dbContext.Database.IsRelational())
+                    await dbContext.Database.CloseConnectionAsync().ConfigureAwait(false);
             }
 
             if (result.IsDuplicate)
