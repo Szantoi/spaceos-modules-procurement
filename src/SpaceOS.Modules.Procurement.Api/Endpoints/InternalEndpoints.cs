@@ -1,3 +1,4 @@
+using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -5,6 +6,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using SpaceOS.Modules.Procurement.Api.Security;
+using SpaceOS.Modules.Procurement.Application.Commands.ReorderAlertReceiver;
 using SpaceOS.Modules.Procurement.Domain.Interfaces;
 using SpaceOS.Modules.Procurement.Infrastructure.Persistence;
 
@@ -112,5 +115,68 @@ public static class InternalEndpoints
         })
         .AllowAnonymous()
         .WithTags("Internal");
+
+        // Track E: from-reorder-alert receiver
+        // IMediator resolved from RequestServices (not lambda parameter) to avoid startup DI resolution.
+        app.MapPost("/internal/from-reorder-alert", async (
+            ReorderAlertRequest request,
+            HttpContext ctx,
+            CancellationToken ct) =>
+        {
+            // DB-P-07: X-SpaceOS-TenantId header must equal body tenantId
+            var headerTenantRaw = ctx.Request.Headers["X-SpaceOS-TenantId"].ToString();
+            if (!Guid.TryParse(headerTenantRaw, out var headerTenantId))
+                return Results.BadRequest(new { error = "Bad request", message = "Invalid or missing X-SpaceOS-TenantId header" });
+
+            if (headerTenantId != request.TenantId)
+                return Results.BadRequest(new { error = "Bad request", message = "X-SpaceOS-TenantId header does not match body tenantId" });
+
+            if (string.IsNullOrWhiteSpace(request.MaterialCode))
+                return Results.UnprocessableEntity(new { error = "Unprocessable", message = "MaterialCode is required" });
+
+            var mediator = ctx.RequestServices.GetRequiredService<IMediator>();
+
+            var command = new ReorderAlertReceiverCommand(
+                request.TenantId,
+                request.MaterialCode,
+                request.CurrentStock,
+                request.ReorderPoint,
+                request.SuggestedQuantity,
+                request.PreferredSupplierId,
+                request.UnitOfMeasure ?? "pcs",
+                request.AlertedAt);
+
+            ReorderAlertReceiverResult result;
+            try
+            {
+                result = await mediator.Send(command, ct).ConfigureAwait(false);
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("MaterialCode"))
+            {
+                // SEC-P-10: orphan materialCode → 422 (not 5xx)
+                return Results.UnprocessableEntity(new { error = "Unprocessable", message = ex.Message });
+            }
+
+            if (result.IsDuplicate)
+                return Results.Ok(new { requisitionId = result.RequisitionId });
+
+            return Results.Created(
+                $"/api/procurement/requisitions/{result.RequisitionId}",
+                new { requisitionId = result.RequisitionId });
+        })
+        .AddEndpointFilter<InternalBearerEndpointFilter>()
+        .AllowAnonymous()
+        .WithTags("Internal");
     }
 }
+
+/// <summary>Request body for the from-reorder-alert internal endpoint.</summary>
+public sealed record ReorderAlertRequest(
+    Guid TenantId,
+    string MaterialCode,
+    decimal CurrentStock,
+    decimal ReorderPoint,
+    decimal SuggestedQuantity,
+    Guid? PreferredSupplierId,
+    string? UnitOfMeasure,
+    DateTimeOffset AlertedAt);

@@ -1,7 +1,11 @@
 using MediatR;
 using SpaceOS.Modules.Procurement.Application.Commands.CreatePurchaseOrder;
 using SpaceOS.Modules.Procurement.Application.Commands.RecordDelivery;
+using SpaceOS.Modules.Procurement.Application.Queries.GetBestPrice;
+using SpaceOS.Modules.Procurement.Application.Queries.GetInvoiceById;
 using SpaceOS.Modules.Procurement.Application.Queries.GetOrderStatus;
+using SpaceOS.Modules.Procurement.Application.Queries.GetRequisitionById;
+using SpaceOS.Modules.Procurement.Application.Queries.GetRequisitions;
 using SpaceOS.Modules.Procurement.Application.Queries.GetSupplierPrices;
 using SpaceOS.Modules.Procurement.Contracts.Dtos;
 using SpaceOS.Modules.Procurement.Contracts.Providers;
@@ -79,5 +83,45 @@ public class ProcurementProviderAdapter : IProcurementProvider
 
         var result = await _mediator.Send(command, ct).ConfigureAwait(false);
         if (!result.IsSuccess) throw new InvalidOperationException(string.Join(", ", result.Errors));
+    }
+
+    // ── v2 additions (Track H) ────────────────────────────────────────────────
+
+    public async Task<PurchaseRequisitionDto?> GetRequisitionByIdAsync(Guid tenantId, Guid requisitionId, CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(new GetRequisitionByIdQuery(tenantId, requisitionId), ct).ConfigureAwait(false);
+        if (!result.IsSuccess) return null;
+        var r = result.Value;
+        return new PurchaseRequisitionDto(
+            r.Id, r.TenantId, r.RequisitionNumber, r.Source, null, r.Status,
+            r.RequestedBy, r.ApprovedBy, r.ApprovedAt, r.RejectedReason,
+            r.ConvertedPurchaseOrderId, r.Notes, r.CreatedAt,
+            r.Lines.Select(l => new PurchaseRequisitionLineDto(l.Id, l.MaterialCode, l.Quantity, l.EstimatedUnitPrice, l.PreferredSupplierId)).ToList());
+    }
+
+    public async Task<IReadOnlyList<PurchaseRequisitionSummaryDto>> GetRequisitionsByTenantAsync(Guid tenantId, CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(new GetRequisitionsQuery(tenantId), ct).ConfigureAwait(false);
+        if (!result.IsSuccess) return Array.Empty<PurchaseRequisitionSummaryDto>();
+        return result.Value.Select(r => new PurchaseRequisitionSummaryDto(
+            r.Id, r.TenantId, r.RequisitionNumber, r.Source, r.Status, r.RequestedBy, r.CreatedAt)).ToList();
+    }
+
+    public async Task<SupplierInvoiceDto?> GetInvoiceByIdAsync(Guid tenantId, Guid invoiceId, CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(new GetInvoiceByIdQuery(tenantId, invoiceId), ct).ConfigureAwait(false);
+        if (!result.IsSuccess) return null;
+        var i = result.Value;
+        return new SupplierInvoiceDto(
+            i.Id, i.TenantId, i.SupplierId, i.PurchaseOrderId, i.SupplierInvoiceNumber,
+            i.InvoiceDate, i.Currency, i.Status, i.TotalNetAmount, i.TotalGrossAmount);
+    }
+
+    public async Task<PriceListEntryDto?> GetBestPriceAsync(Guid tenantId, string materialCode, int quantity, string currency, CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(new GetBestPriceQuery(tenantId, materialCode, quantity, currency), ct).ConfigureAwait(false);
+        if (!result.IsSuccess || result.Value is null) return null;
+        var e = result.Value;
+        return new PriceListEntryDto(e.Id, e.MaterialCode, e.UnitPrice, e.MinQuantity, e.MaxQuantity);
     }
 }

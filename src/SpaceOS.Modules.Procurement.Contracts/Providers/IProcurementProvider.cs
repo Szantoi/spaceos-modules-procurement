@@ -19,4 +19,21 @@ public interface IProcurementProvider
 
     /// <summary>Records a delivery received against an existing purchase order.</summary>
     Task RecordDeliveryAsync(DeliveryDto delivery, CancellationToken ct = default);
+
+    // ── v2 additions (Track H — additive, existing methods unchanged) ─────────
+
+    /// <summary>Returns the purchase requisition with the given ID for the specified tenant, or null if not found.</summary>
+    Task<PurchaseRequisitionDto?> GetRequisitionByIdAsync(Guid tenantId, Guid requisitionId, CancellationToken ct = default);
+
+    /// <summary>Returns all purchase requisitions for the specified tenant.</summary>
+    Task<IReadOnlyList<PurchaseRequisitionSummaryDto>> GetRequisitionsByTenantAsync(Guid tenantId, CancellationToken ct = default);
+
+    /// <summary>Returns the supplier invoice with the given ID for the specified tenant, or null if not found.</summary>
+    Task<SupplierInvoiceDto?> GetInvoiceByIdAsync(Guid tenantId, Guid invoiceId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns the best (lowest) unit price available for the given material code, quantity, and currency
+    /// from active price lists for the specified tenant.
+    /// </summary>
+    Task<PriceListEntryDto?> GetBestPriceAsync(Guid tenantId, string materialCode, int quantity, string currency, CancellationToken ct = default);
 }

@@ -57,6 +57,10 @@ app.MapGet("/health/ready", async (ProcurementDbContext db) =>
 }).AllowAnonymous();
 
 app.MapProcurementEndpoints();
+app.MapRequisitionEndpoints();
+app.MapInvoiceEndpoints();
+app.MapPriceListEndpoints();
+app.MapMatchPolicyEndpoints();
 app.MapInternalEndpoints();
 app.Run();
 

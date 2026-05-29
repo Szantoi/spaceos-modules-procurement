@@ -7,9 +7,20 @@ public class ProcurementDbContext : DbContext
 {
     public ProcurementDbContext(DbContextOptions<ProcurementDbContext> options) : base(options) { }
 
+    // Core v1 entities
     public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
     public DbSet<Delivery> Deliveries => Set<Delivery>();
+
+    // v2 entities
+    public DbSet<PurchaseRequisition> PurchaseRequisitions => Set<PurchaseRequisition>();
+    public DbSet<SupplierInvoice> SupplierInvoices => Set<SupplierInvoice>();
+    public DbSet<InvoiceMatchEntity> InvoiceMatches => Set<InvoiceMatchEntity>();
+    public DbSet<PriceList> PriceLists => Set<PriceList>();
+    public DbSet<MatchPolicyEntity> MatchPolicies => Set<MatchPolicyEntity>();
+    public DbSet<ProcurementOutboxMessage> OutboxMessages => Set<ProcurementOutboxMessage>();
+    public DbSet<ProcurementInboxMessage> InboxMessages => Set<ProcurementInboxMessage>();
+    public DbSet<ProcurementAuditLog> AuditLogs => Set<ProcurementAuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
