@@ -35,18 +35,32 @@ public class ProcurementWorkerTests : IDisposable
         Environment.SetEnvironmentVariable("SPACEOS_INTERNAL_SECRET", null);
     }
 
-    private static ProcurementDbContext CreateInMemoryDb()
-    {
-        var opts = new DbContextOptionsBuilder<ProcurementDbContext>()
-            .UseInMemoryDatabase($"worker-test-{Guid.NewGuid()}")
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private static DbContextOptions<ProcurementDbContext> BuildInMemoryOptions(string dbName)
+        => new DbContextOptionsBuilder<ProcurementDbContext>()
+            .UseInMemoryDatabase(dbName)
             .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
             .Options;
-        return new ProcurementDbContext(opts);
+
+    private static (ProcurementDbContext db, string dbName) CreateInMemoryDb()
+    {
+        var dbName = $"worker-test-{Guid.NewGuid()}";
+        return (new ProcurementDbContext(BuildInMemoryOptions(dbName)), dbName);
+    }
+
+    /// <summary>
+    /// Opens a fresh context (bypasses test's change tracker) to verify what the worker wrote.
+    /// </summary>
+    private static async Task<ProcurementOutboxMessage?> GetFreshMsgAsync(string dbName, Guid msgId)
+    {
+        await using var freshDb = new ProcurementDbContext(BuildInMemoryOptions(dbName));
+        return await freshDb.OutboxMessages.AsNoTracking()
+            .FirstOrDefaultAsync(m => m.Id == msgId);
     }
 
     private static string BuildPayload(Guid? tenantId = null, Guid? deliveryId = null)
-    {
-        return JsonSerializer.Serialize(new
+        => JsonSerializer.Serialize(new
         {
             TenantId = tenantId ?? TenantId,
             DeliveryId = deliveryId ?? DeliveryId,
@@ -54,33 +68,24 @@ public class ProcurementWorkerTests : IDisposable
             MaterialType = "WD-001",
             ReceivedQuantity = 10.0
         });
-    }
 
     private static ProcurementOutboxMessage CreatePendingOutboxMsg(
         Guid? tenantId = null, Guid? idempotencyKey = null, string? payloadJson = null)
-    {
-        return ProcurementOutboxMessage.Create(
+        => ProcurementOutboxMessage.Create(
             tenantId ?? TenantId,
             "InventoryInboundRequested",
             idempotencyKey ?? DeliveryId,
             payloadJson ?? BuildPayload(tenantId));
-    }
 
-    private static (ProcurementIntegrationWorker worker, IServiceProvider sp) BuildWorker(
-        ProcurementDbContext db,
+    private static ProcurementIntegrationWorker BuildWorker(
+        string dbName,
         HttpMessageHandler httpHandler)
     {
-        var services = new ServiceCollection();
-        // Register as singleton so the scope's Dispose does NOT dispose db (test owns lifetime)
-        services.AddSingleton<ProcurementDbContext>(db);
+        var services = new ServiceCollection().AddLogging().BuildServiceProvider();
+        var dbFactory = new TestWorkerDbContextFactory(dbName);
         var httpClientFactory = new MockHttpClientFactory(httpHandler);
-        services.AddSingleton<IHttpClientFactory>(httpClientFactory);
-        services.AddLogging();
-
-        var sp = services.BuildServiceProvider();
-        var logger = sp.GetRequiredService<ILogger<ProcurementIntegrationWorker>>();
-        var worker = new ProcurementIntegrationWorker(sp, httpClientFactory, logger);
-        return (worker, sp);
+        var logger = services.GetRequiredService<ILogger<ProcurementIntegrationWorker>>();
+        return new ProcurementIntegrationWorker(dbFactory, httpClientFactory, logger);
     }
 
     private static HttpMessageHandler BuildHttpHandler(HttpStatusCode statusCode, string? body = null)
@@ -98,53 +103,57 @@ public class ProcurementWorkerTests : IDisposable
         return mock.Object;
     }
 
+    private static async Task RunOneCycleAsync(ProcurementIntegrationWorker worker, CancellationToken ct)
+    {
+        var method = typeof(ProcurementIntegrationWorker)
+            .GetMethod("ProcessBatchAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        await ((Task)method.Invoke(worker, [ct])!).ConfigureAwait(false);
+    }
+
+    // ── Tests ─────────────────────────────────────────────────────────────────
+
     [Fact]
     public async Task Worker_WhenPendingMessage_ShouldProcessAndComplete()
     {
-        await using var db = CreateInMemoryDb();
+        var (db, dbName) = CreateInMemoryDb();
+        await using var _ = db;
         var msg = CreatePendingOutboxMsg();
         db.OutboxMessages.Add(msg);
         await db.SaveChangesAsync();
 
-        var handler = BuildHttpHandler(HttpStatusCode.OK);
-        var (worker, sp) = BuildWorker(db, handler);
-        await using var _ = (IAsyncDisposable)sp;
-
+        var worker = BuildWorker(dbName, BuildHttpHandler(HttpStatusCode.OK));
         await RunOneCycleAsync(worker, CancellationToken.None);
 
-        var updated = await db.OutboxMessages.FindAsync(msg.Id);
+        var updated = await GetFreshMsgAsync(dbName, msg.Id);
         updated!.Status.Should().Be("Completed");
     }
 
     [Fact]
     public async Task Worker_WhenPermanent422_ShouldMarkFailedImmediately()
     {
-        await using var db = CreateInMemoryDb();
+        var (db, dbName) = CreateInMemoryDb();
+        await using var _ = db;
         var msg = CreatePendingOutboxMsg();
         db.OutboxMessages.Add(msg);
         await db.SaveChangesAsync();
 
-        var handler = BuildHttpHandler(HttpStatusCode.UnprocessableEntity);
-        var (worker, sp) = BuildWorker(db, handler);
-        await using var _ = (IAsyncDisposable)sp;
-
+        var worker = BuildWorker(dbName, BuildHttpHandler(HttpStatusCode.UnprocessableEntity));
         await RunOneCycleAsync(worker, CancellationToken.None);
 
-        var updated = await db.OutboxMessages.FindAsync(msg.Id);
+        var updated = await GetFreshMsgAsync(dbName, msg.Id);
         updated!.Status.Should().Be("Failed");
-        // Permanent failure — no retry, so attempt count should stay at 1
         updated.AttemptCount.Should().Be(1);
     }
 
     [Fact]
     public async Task Worker_WhenTransient503_ShouldRetryUpToMaxAttempts()
     {
-        await using var db = CreateInMemoryDb();
+        var (db, dbName) = CreateInMemoryDb();
+        await using var _ = db;
         var msg = CreatePendingOutboxMsg();
         db.OutboxMessages.Add(msg);
         await db.SaveChangesAsync();
 
-        // Always 503 — all retries fail
         var callCount = 0;
         var mockHandler = new Mock<HttpMessageHandler>();
         mockHandler.Protected()
@@ -158,12 +167,10 @@ public class ProcurementWorkerTests : IDisposable
                 return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable);
             });
 
-        var (worker, sp) = BuildWorker(db, mockHandler.Object);
-        await using var _ = (IAsyncDisposable)sp;
+        var worker = BuildWorker(dbName, mockHandler.Object);
         await RunOneCycleAsync(worker, CancellationToken.None);
 
-        var updated = await db.OutboxMessages.FindAsync(msg.Id);
-        // After max retries exhausted: status should be Failed or Pending (back-off)
+        var updated = await GetFreshMsgAsync(dbName, msg.Id);
         updated!.Status.Should().BeOneOf("Failed", "Pending");
         callCount.Should().BeGreaterThanOrEqualTo(1);
     }
@@ -172,18 +179,16 @@ public class ProcurementWorkerTests : IDisposable
     public async Task Worker_WhenDuplicate200_ShouldMarkCompleted()
     {
         // BE-P-08: idempotent 200 from Inventory (dup) → Completed
-        await using var db = CreateInMemoryDb();
+        var (db, dbName) = CreateInMemoryDb();
+        await using var _ = db;
         var msg = CreatePendingOutboxMsg();
         db.OutboxMessages.Add(msg);
         await db.SaveChangesAsync();
 
-        var handler = BuildHttpHandler(HttpStatusCode.OK, """{"reason":"duplicate"}""");
-        var (worker, sp) = BuildWorker(db, handler);
-        await using var _ = (IAsyncDisposable)sp;
-
+        var worker = BuildWorker(dbName, BuildHttpHandler(HttpStatusCode.OK, """{"reason":"duplicate"}"""));
         await RunOneCycleAsync(worker, CancellationToken.None);
 
-        var updated = await db.OutboxMessages.FindAsync(msg.Id);
+        var updated = await GetFreshMsgAsync(dbName, msg.Id);
         updated!.Status.Should().Be("Completed");
     }
 
@@ -191,10 +196,10 @@ public class ProcurementWorkerTests : IDisposable
     public async Task Worker_WhenTenantMismatch_ShouldAbort()
     {
         // SEC-P-04: payload.TenantId != msg.TenantId → abort, mark Failed
-        await using var db = CreateInMemoryDb();
+        var (db, dbName) = CreateInMemoryDb();
+        await using var _ = db;
 
         var differentTenantId = Guid.NewGuid();
-        // Payload has a different TenantId than the outbox message's TenantId
         var msg = ProcurementOutboxMessage.Create(
             TenantId,
             "InventoryInboundRequested",
@@ -204,13 +209,10 @@ public class ProcurementWorkerTests : IDisposable
         db.OutboxMessages.Add(msg);
         await db.SaveChangesAsync();
 
-        var handler = BuildHttpHandler(HttpStatusCode.OK);
-        var (worker, sp) = BuildWorker(db, handler);
-        await using var _ = (IAsyncDisposable)sp;
-
+        var worker = BuildWorker(dbName, BuildHttpHandler(HttpStatusCode.OK));
         await RunOneCycleAsync(worker, CancellationToken.None);
 
-        var updated = await db.OutboxMessages.FindAsync(msg.Id);
+        var updated = await GetFreshMsgAsync(dbName, msg.Id);
         updated!.Status.Should().Be("Failed");
         updated.LastError.Should().Contain("TenantMismatch");
     }
@@ -218,30 +220,27 @@ public class ProcurementWorkerTests : IDisposable
     [Fact]
     public async Task Worker_Lease_ShouldReclaimExpiredInFlight()
     {
-        // BE-P-03: an expired InFlight message should be reclaimed
-        await using var db = CreateInMemoryDb();
+        // BE-P-03: an expired InFlight message should be reclaimed and processed
+        var (db, dbName) = CreateInMemoryDb();
+        await using var _ = db;
         var msg = CreatePendingOutboxMsg();
         msg.MarkInFlight(leaseSeconds: -1); // immediately expired
         db.OutboxMessages.Add(msg);
         await db.SaveChangesAsync();
 
-        var handler = BuildHttpHandler(HttpStatusCode.OK);
-        var (worker, sp) = BuildWorker(db, handler);
-        await using var _ = (IAsyncDisposable)sp;
-
+        var worker = BuildWorker(dbName, BuildHttpHandler(HttpStatusCode.OK));
         await RunOneCycleAsync(worker, CancellationToken.None);
 
-        var updated = await db.OutboxMessages.FindAsync(msg.Id);
+        var updated = await GetFreshMsgAsync(dbName, msg.Id);
         updated!.Status.Should().Be("Completed");
     }
 
     [Fact]
     public async Task Worker_CircuitBreaker_ShouldOpenAfterConsecutiveFailures()
     {
-        // After 3 consecutive transient failures, circuit should open (worker skips next batch)
-        await using var db = CreateInMemoryDb();
+        var (db, dbName) = CreateInMemoryDb();
+        await using var _ = db;
 
-        // Create 3 messages that all fail transiently
         for (var i = 0; i < 3; i++)
         {
             var m = ProcurementOutboxMessage.Create(
@@ -251,42 +250,32 @@ public class ProcurementWorkerTests : IDisposable
         }
         await db.SaveChangesAsync();
 
-        var handler = BuildHttpHandler(HttpStatusCode.ServiceUnavailable);
-        var (worker, sp) = BuildWorker(db, handler);
-        await using var _ = (IAsyncDisposable)sp;
+        var worker = BuildWorker(dbName, BuildHttpHandler(HttpStatusCode.ServiceUnavailable));
 
-        // Run multiple cycles — worker should eventually stop calling after circuit opens
         for (var i = 0; i < 4; i++)
             await RunOneCycleAsync(worker, CancellationToken.None);
 
-        // All messages should be either Failed or Pending (back-off)
-        var statuses = await db.OutboxMessages.Select(m => m.Status).ToListAsync();
+        await using var verifyDb = new ProcurementDbContext(BuildInMemoryOptions(dbName));
+        var statuses = await verifyDb.OutboxMessages.AsNoTracking().Select(m => m.Status).ToListAsync();
         statuses.Should().AllSatisfy(s => s.Should().BeOneOf("Failed", "Pending", "InFlight"));
     }
 
     [Fact]
     public async Task Worker_AttemptCount_ShouldNotDoubleCountOnReclaim()
     {
-        // BE-P-03: reclaiming an InFlight message should not increment AttemptCount in CLAIM phase
-        await using var db = CreateInMemoryDb();
+        // BE-P-03: reclaiming an InFlight message should not double-count AttemptCount
+        var (db, dbName) = CreateInMemoryDb();
+        await using var _ = db;
         var msg = CreatePendingOutboxMsg();
-
-        // First, mark InFlight — AttemptCount = 1
-        msg.MarkInFlight(leaseSeconds: -1); // expired
+        msg.MarkInFlight(leaseSeconds: -1); // expired InFlight
+        var beforeAttempt = msg.AttemptCount;
         db.OutboxMessages.Add(msg);
         await db.SaveChangesAsync();
 
-        var beforeAttempt = msg.AttemptCount;
-
-        var handler = BuildHttpHandler(HttpStatusCode.OK);
-        var (worker, sp) = BuildWorker(db, handler);
-        await using var _ = (IAsyncDisposable)sp;
-
+        var worker = BuildWorker(dbName, BuildHttpHandler(HttpStatusCode.OK));
         await RunOneCycleAsync(worker, CancellationToken.None);
 
-        var updated = await db.OutboxMessages.FindAsync(msg.Id);
-        // Reclaim increments again in MarkInFlight — this is expected behavior per spec
-        // The important thing is it completes, not that AttemptCount is exactly 1
+        var updated = await GetFreshMsgAsync(dbName, msg.Id);
         updated!.Status.Should().Be("Completed");
         updated.AttemptCount.Should().BeGreaterThanOrEqualTo(beforeAttempt);
     }
@@ -294,59 +283,56 @@ public class ProcurementWorkerTests : IDisposable
     [Fact]
     public async Task Worker_ShouldScrubSensitiveDataFromLastError()
     {
-        // SEC-P-11: LastError should only contain error type, not payload data
-        await using var db = CreateInMemoryDb();
+        // SEC-P-11: LastError should only contain error type (≤64 chars), not payload data
+        var (db, dbName) = CreateInMemoryDb();
+        await using var _ = db;
         var msg = CreatePendingOutboxMsg();
         db.OutboxMessages.Add(msg);
         await db.SaveChangesAsync();
 
-        var handler = BuildHttpHandler(HttpStatusCode.BadRequest);
-        var (worker, sp) = BuildWorker(db, handler);
-        await using var _ = (IAsyncDisposable)sp;
-
+        var worker = BuildWorker(dbName, BuildHttpHandler(HttpStatusCode.BadRequest));
         await RunOneCycleAsync(worker, CancellationToken.None);
 
-        var updated = await db.OutboxMessages.FindAsync(msg.Id);
+        var updated = await GetFreshMsgAsync(dbName, msg.Id);
         updated!.LastError.Should().NotBeNullOrEmpty();
-        // LastError must NOT contain sensitive data (no full exception messages, no payload)
         updated.LastError!.Length.Should().BeLessOrEqualTo(64);
     }
 
     [Fact]
     public async Task Worker_ShouldSetTenantConfigPerMessage()
     {
-        // Per-message set_config must be called — verified by no SecurityException being thrown
-        // (In InMemory mode, ExecuteSqlRaw is skipped — this test verifies no exceptions)
-        await using var db = CreateInMemoryDb();
+        // Per-message set_config — in InMemory mode ExecuteSqlRaw is skipped,
+        // verify no exceptions are thrown and message processes normally.
+        var (db, dbName) = CreateInMemoryDb();
+        await using var _ = db;
         var msg = CreatePendingOutboxMsg();
         db.OutboxMessages.Add(msg);
         await db.SaveChangesAsync();
 
-        var handler = BuildHttpHandler(HttpStatusCode.OK);
-        var (worker, sp) = BuildWorker(db, handler);
-        await using var _ = (IAsyncDisposable)sp;
-
+        var worker = BuildWorker(dbName, BuildHttpHandler(HttpStatusCode.OK));
         var act = async () => await RunOneCycleAsync(worker, CancellationToken.None);
 
         await act.Should().NotThrowAsync();
+
+        var updated = await GetFreshMsgAsync(dbName, msg.Id);
+        updated!.Status.Should().Be("Completed");
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────────
+    // ── Test doubles ──────────────────────────────────────────────────────────
 
-    private static async Task RunOneCycleAsync(ProcurementIntegrationWorker worker, CancellationToken ct)
+    /// <summary>
+    /// Creates a fresh DbContext from the same InMemory database name per call.
+    /// The worker owns and disposes its context; the test verifies via a separate instance.
+    /// </summary>
+    private sealed class TestWorkerDbContextFactory(string dbName)
+        : IProcurementWorkerDbContextFactory
     {
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        // Use reflection to call the private ProcessBatchAsync method for isolated testing
-        var method = typeof(ProcurementIntegrationWorker)
-            .GetMethod("ProcessBatchAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
-        await ((Task)method.Invoke(worker, new object[] { cts.Token })!).ConfigureAwait(false);
+        public Task<ProcurementDbContext> CreateAsync(CancellationToken ct)
+            => Task.FromResult(new ProcurementDbContext(BuildInMemoryOptions(dbName)));
     }
 
-    private sealed class MockHttpClientFactory : IHttpClientFactory
+    private sealed class MockHttpClientFactory(HttpMessageHandler handler) : IHttpClientFactory
     {
-        private readonly HttpMessageHandler _handler;
-        public MockHttpClientFactory(HttpMessageHandler handler) => _handler = handler;
-
-        public HttpClient CreateClient(string name) => new HttpClient(_handler, disposeHandler: false);
+        public HttpClient CreateClient(string name) => new(handler, disposeHandler: false);
     }
 }

@@ -21,11 +21,6 @@ public static class ServiceCollectionExtensions
         services.AddHttpContextAccessor();
         services.AddSingleton<TenantSessionInterceptor>();
 
-        // BE-P-10: worker uses dedicated connection string when available
-        var workerConnectionString = Environment.GetEnvironmentVariable("ProcurementWorkerConnectionString");
-        if (string.IsNullOrEmpty(workerConnectionString))
-            workerConnectionString = connectionString;
-
         services.AddDbContext<ProcurementDbContext>((sp, options) =>
         {
             options.UseNpgsql(connectionString, npg =>
@@ -40,6 +35,16 @@ public static class ServiceCollectionExtensions
 
         // Domain services
         services.AddSingleton<IMatchPolicy, DefaultMatchPolicy>();
+
+        // BE-P-10: worker uses dedicated BYPASSRLS connection string (no TenantSessionInterceptor)
+        var workerConnectionString = Environment.GetEnvironmentVariable("ProcurementWorkerConnectionString");
+        if (string.IsNullOrEmpty(workerConnectionString))
+        {
+            // Fallback: same connection string, but still no interceptor — RLS may block until fixed
+            workerConnectionString = connectionString;
+        }
+        services.AddSingleton<IProcurementWorkerDbContextFactory>(
+            new ProcurementWorkerDbContextFactory(workerConnectionString));
 
         // Track D: outbox integration worker + HttpClient
         services.AddHttpClient("inventory-internal");

@@ -209,7 +209,7 @@ public sealed class ProcurementV2Repository : IProcurementV2Repository
         // BE-P-09: advisory-lock-safe fn call inside the current transaction
         var result = await _db.Database
             .SqlQueryRaw<string>(
-                "SELECT spaceos_procurement.fn_next_requisition_number({0}, {1})",
+                "SELECT spaceos_procurement.fn_next_requisition_number({0}, {1}) AS \"Value\"",
                 tenantId.ToString(), DateTime.UtcNow.Year)
             .FirstAsync(ct).ConfigureAwait(false);
 

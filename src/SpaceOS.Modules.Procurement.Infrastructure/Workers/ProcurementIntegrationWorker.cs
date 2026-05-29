@@ -3,7 +3,6 @@ using System.Security;
 using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SpaceOS.Modules.Procurement.Infrastructure.Persistence;
@@ -39,16 +38,16 @@ public sealed class ProcurementIntegrationWorker : BackgroundService
     private const int CircuitBreakerThreshold = 3;
     private static readonly TimeSpan CircuitBreakerCooldown = TimeSpan.FromSeconds(60);
 
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IProcurementWorkerDbContextFactory _dbFactory;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<ProcurementIntegrationWorker> _logger;
 
     public ProcurementIntegrationWorker(
-        IServiceProvider serviceProvider,
+        IProcurementWorkerDbContextFactory dbFactory,
         IHttpClientFactory httpClientFactory,
         ILogger<ProcurementIntegrationWorker> logger)
     {
-        _serviceProvider = serviceProvider;
+        _dbFactory = dbFactory;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
@@ -80,8 +79,7 @@ public sealed class ProcurementIntegrationWorker : BackgroundService
             return;
         }
 
-        await using var scope = _serviceProvider.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<ProcurementDbContext>();
+        await using var db = await _dbFactory.CreateAsync(ct).ConfigureAwait(false);
 
         // ── Phase 1: CLAIM ───────────────────────────────────────────────────
         List<Guid> claimedIds;
