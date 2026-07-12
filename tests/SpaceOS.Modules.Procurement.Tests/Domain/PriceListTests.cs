@@ -89,4 +89,70 @@ public class PriceListTests
         var lower = result.Value.Entries.OrderBy(e => e.UnitPrice).First();
         lower.UnitPrice.Should().Be(90m);
     }
+
+    // BE-PROC-001: Update tests
+    [Fact]
+    public void Update_FromDraft_ShouldSucceed()
+    {
+        var priceList = CreateDraftPriceList().Value;
+        var newEntries = new[] { ("MAT-001", 200m, 1, (int?)null), ("MAT-002", 150m, 5, (int?)null) };
+
+        var result = priceList.Update(new DateOnly(2026, 2, 1), new DateOnly(2026, 12, 31), newEntries);
+
+        result.IsSuccess.Should().BeTrue();
+        priceList.ValidFrom.Should().Be(new DateOnly(2026, 2, 1));
+        priceList.ValidTo.Should().Be(new DateOnly(2026, 12, 31));
+        priceList.Entries.Should().HaveCount(2);
+        priceList.Entries.Should().Contain(e => e.MaterialCode == "MAT-001" && e.UnitPrice == 200m);
+    }
+
+    [Fact]
+    public void Update_FromActive_ShouldFail()
+    {
+        var priceList = CreateDraftPriceList().Value;
+        priceList.Activate();
+        var newEntries = OneValidEntry();
+
+        var result = priceList.Update(new DateOnly(2026, 2, 1), null, newEntries);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Status.Should().Be(ResultStatus.Invalid);
+    }
+
+    [Fact]
+    public void Update_FromExpired_ShouldFail()
+    {
+        var priceList = CreateDraftPriceList().Value;
+        priceList.Activate();
+        priceList.Expire();
+        var newEntries = OneValidEntry();
+
+        var result = priceList.Update(new DateOnly(2026, 2, 1), null, newEntries);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Status.Should().Be(ResultStatus.Invalid);
+    }
+
+    [Fact]
+    public void Update_WithInvalidDateRange_ShouldFail()
+    {
+        var priceList = CreateDraftPriceList().Value;
+        var newEntries = OneValidEntry();
+
+        var result = priceList.Update(new DateOnly(2026, 12, 31), new DateOnly(2026, 1, 1), newEntries);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Status.Should().Be(ResultStatus.Invalid);
+    }
+
+    [Fact]
+    public void Update_WithNoEntries_ShouldFail()
+    {
+        var priceList = CreateDraftPriceList().Value;
+
+        var result = priceList.Update(new DateOnly(2026, 2, 1), null, Array.Empty<(string, decimal, int, int?)>());
+
+        result.IsSuccess.Should().BeFalse();
+        result.Status.Should().Be(ResultStatus.Invalid);
+    }
 }

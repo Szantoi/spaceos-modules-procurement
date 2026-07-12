@@ -27,6 +27,8 @@ public interface IProcurementV2Repository
     // ── PriceList ────────────────────────────────────────────────────────────
     Task<PriceList?> GetPriceListByIdAsync(Guid id, CancellationToken ct = default);
     Task<IReadOnlyList<PriceList>> GetPriceListsByTenantAsync(Guid tenantId, CancellationToken ct = default);
+    Task<IReadOnlyList<PriceList>> GetPriceListsBySupplierAsync(Guid tenantId, Guid supplierId, CancellationToken ct = default);
+    Task<IReadOnlyList<PriceList>> GetActivePriceListsBySupplierAsync(Guid tenantId, Guid supplierId, string currency, CancellationToken ct = default);
     Task AddPriceListAsync(PriceList priceList, CancellationToken ct = default);
     Task<bool> HasOverlappingActivePriceListAsync(Guid tenantId, Guid supplierId, string currency, DateOnly validFrom, DateOnly? validTo, Guid excludeId, CancellationToken ct = default);
 

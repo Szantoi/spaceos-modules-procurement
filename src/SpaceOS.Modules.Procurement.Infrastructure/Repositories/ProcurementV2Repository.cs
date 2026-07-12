@@ -77,6 +77,24 @@ public sealed class ProcurementV2Repository : IProcurementV2Repository
             .Where(pl => pl.TenantId == tenantId)
             .ToListAsync(ct).ConfigureAwait(false);
 
+    public async Task<IReadOnlyList<PriceList>> GetPriceListsBySupplierAsync(
+        Guid tenantId, Guid supplierId, CancellationToken ct = default)
+        => await _db.PriceLists.AsNoTracking()
+            .Include(pl => pl.Entries)
+            .Where(pl => pl.TenantId == tenantId && pl.SupplierId == supplierId)
+            .OrderByDescending(pl => pl.CreatedAt)
+            .ToListAsync(ct).ConfigureAwait(false);
+
+    public async Task<IReadOnlyList<PriceList>> GetActivePriceListsBySupplierAsync(
+        Guid tenantId, Guid supplierId, string currency, CancellationToken ct = default)
+        => await _db.PriceLists
+            .Include(pl => pl.Entries)
+            .Where(pl => pl.TenantId == tenantId
+                && pl.SupplierId == supplierId
+                && pl.Currency == currency
+                && pl.Status == Domain.Enums.PriceListStatus.Active)
+            .ToListAsync(ct).ConfigureAwait(false);
+
     public async Task AddPriceListAsync(PriceList priceList, CancellationToken ct = default)
         => await _db.PriceLists.AddAsync(priceList, ct).ConfigureAwait(false);
 

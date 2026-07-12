@@ -9,6 +9,8 @@ using System.Security.Claims;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddProcurementApplication();
+builder.Services.AddMemoryCache();
+builder.Services.AddControllers();
 
 var jwtAuthority = builder.Configuration["Jwt:Authority"]
     ?? Environment.GetEnvironmentVariable("JWT_AUTHORITY");
@@ -49,6 +51,7 @@ builder.Services.AddProcurementInfrastructure(connectionString);
 var app = builder.Build();
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapControllers();
 app.MapGet("/healthz", () => Results.Ok("healthy")).AllowAnonymous();
 app.MapGet("/health/ready", async (ProcurementDbContext db) =>
 {

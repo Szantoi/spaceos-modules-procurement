@@ -1,5 +1,40 @@
 # SpaceOS.Modules.Procurement — CLAUDE.md
 
+## SESSION STARTUP/SHUTDOWN RITUAL
+
+**Minden session elején:**
+```bash
+# 0. Datahaven státusz regisztráció — jelezd hogy dolgozol
+curl -X POST https://datahaven.joinerytech.hu/api/terminal/status \
+  -H "Authorization: Bearer dev-token-spaceos-dashboard-2026" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "terminal": "procurement",
+    "status": "working",
+    "currentTask": "Session started - checking inbox"
+  }'
+
+# 1. Inbox ellenőrzés
+ls /opt/spaceos/docs/mailbox/procurement/inbox/
+grep -l "status: UNREAD" /opt/spaceos/docs/mailbox/procurement/inbox/*.md 2>/dev/null
+```
+
+**Session végén (DONE/BLOCKED outbox után):**
+```bash
+# Datahaven státusz regisztráció — jelezd hogy befejeztél
+curl -X POST https://datahaven.joinerytech.hu/api/terminal/status \
+  -H "Authorization: Bearer dev-token-spaceos-dashboard-2026" \
+  -H "Content-Type: application/json" \
+  -d '{"terminal":"procurement","status":"idle"}'
+```
+
+**Datahaven Dashboard:** https://datahaven.joinerytech.hu (token: `dev-token-spaceos-dashboard-2026`)
+- Dashboard (`/`) — Procurement státusz (WORKING/IDLE), inbox/outbox metrikák
+- Kanban (`/kanban`) — Procurement swimlane a Delivery track-en
+- Teljes API: `docs/WORKFLOW.md` — "Datahaven Dashboard" szakasz
+
+---
+
 ## JELENLEGI ÁLLAPOT (2026-04-17)
 
 | | |

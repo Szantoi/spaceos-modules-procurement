@@ -22,6 +22,16 @@ public class ProcurementDbContext : DbContext
     public DbSet<ProcurementInboxMessage> InboxMessages => Set<ProcurementInboxMessage>();
     public DbSet<ProcurementAuditLog> AuditLogs => Set<ProcurementAuditLog>();
 
+    // Supplier complaint flow
+    public DbSet<SupplierComplaint> SupplierComplaints => Set<SupplierComplaint>();
+
+    // Subcontracting
+    public DbSet<SubcontractOrder> SubcontractOrders => Set<SubcontractOrder>();
+
+    // ASN tracking (Week 3)
+    public DbSet<AsnShipment> AsnShipments => Set<AsnShipment>();
+    public DbSet<ReceiptQueue> ReceiptQueues => Set<ReceiptQueue>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("spaceos_procurement");

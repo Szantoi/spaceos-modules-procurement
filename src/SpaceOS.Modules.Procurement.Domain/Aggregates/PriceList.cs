@@ -99,4 +99,33 @@ public sealed class PriceList : AggregateRoot
         RaiseDomainEvent(new PriceListExpiredEvent(Id, TenantId));
         return Result.Success();
     }
+
+    /// <summary>
+    /// Updates the price list entries and validity period.
+    /// Guard: Status must be Draft.
+    /// </summary>
+    public Result Update(
+        DateOnly validFrom,
+        DateOnly? validTo,
+        IReadOnlyList<(string MaterialCode, decimal UnitPrice, int MinQuantity, int? MaxQuantity)> entries)
+    {
+        if (Status != PriceListStatus.Draft)
+            return Result.Invalid(new ValidationError($"Cannot update a price list in status {Status}. Only Draft price lists can be edited."));
+        if (validTo.HasValue && validTo.Value < validFrom)
+            return Result.Invalid(new ValidationError("ValidTo must be >= ValidFrom."));
+        if (entries is null || entries.Count == 0)
+            return Result.Invalid(new ValidationError("At least one entry is required."));
+
+        ValidFrom = validFrom;
+        ValidTo = validTo;
+
+        _entries.Clear();
+        foreach (var (mc, up, minQty, maxQty) in entries)
+        {
+            var entry = PriceListEntry.Create(Id, TenantId, mc, up, minQty, maxQty);
+            _entries.Add(entry);
+        }
+
+        return Result.Success();
+    }
 }

@@ -41,6 +41,17 @@ public sealed class ActivatePriceListCommandHandler
         if (hasOverlap)
             return Result.Conflict("An overlapping active price list already exists for this supplier/currency/period.");
 
+        // BE-PROC-001: Auto-expire previous active price lists for same supplier/currency
+        var activePriceLists = await _repository.GetActivePriceListsBySupplierAsync(
+            request.TenantId, priceList.SupplierId, priceList.Currency, ct).ConfigureAwait(false);
+
+        foreach (var oldPriceList in activePriceLists.Where(pl => pl.Id != priceList.Id))
+        {
+            var expireResult = oldPriceList.Expire();
+            if (!expireResult.IsSuccess)
+                return expireResult;
+        }
+
         var activateResult = priceList.Activate();
         if (!activateResult.IsSuccess)
             return activateResult;

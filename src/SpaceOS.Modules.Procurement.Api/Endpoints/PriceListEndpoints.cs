@@ -4,8 +4,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using SpaceOS.Modules.Procurement.Application.Commands.ActivatePriceList;
 using SpaceOS.Modules.Procurement.Application.Commands.CreatePriceList;
+using SpaceOS.Modules.Procurement.Application.Commands.UpdatePriceList;
 using SpaceOS.Modules.Procurement.Application.Queries.GetBestPrice;
 using SpaceOS.Modules.Procurement.Application.Queries.GetPriceLists;
+using SpaceOS.Modules.Procurement.Application.Queries.GetPriceListsBySupplier;
 
 namespace SpaceOS.Modules.Procurement.Api.Endpoints;
 
@@ -19,6 +21,15 @@ public static class PriceListEndpoints
         group.MapPost("/{id:guid}/activate", ActivatePriceList);
         group.MapGet("/", GetPriceLists);
         group.MapGet("/best-price", GetBestPrice);
+
+        // BE-PROC-001: Supplier self-service price list endpoints
+        var supplierGroup = app.MapGroup("/api/procurement/suppliers/{supplierId:guid}/price-list")
+            .RequireAuthorization("ManufacturerOnly");
+
+        supplierGroup.MapPost("/", CreatePriceListForSupplier);
+        supplierGroup.MapPut("/{id:guid}", UpdatePriceList);
+        supplierGroup.MapPost("/{id:guid}/activate", ActivatePriceListForSupplier);
+        supplierGroup.MapGet("/", GetPriceListsBySupplier);
 
         return app;
     }
@@ -38,7 +49,7 @@ public static class PriceListEndpoints
             request.Currency,
             request.ValidFrom,
             request.ValidTo,
-            request.Entries.Select(e => new PriceListEntryRequest(e.MaterialCode, e.UnitPrice, e.MinQuantity, e.MaxQuantity)).ToList());
+            request.Entries.Select(e => new Application.Commands.CreatePriceList.PriceListEntryRequest(e.MaterialCode, e.UnitPrice, e.MinQuantity, e.MaxQuantity)).ToList());
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
         return ResultToHttp.Map(result, id => Results.Created($"/api/procurement/price-lists/{id}", new { id }));
@@ -85,6 +96,82 @@ public static class PriceListEndpoints
         return ResultToHttp.Map(result);
     }
 
+    // BE-PROC-001: Supplier self-service endpoints
+    private static async Task<IResult> CreatePriceListForSupplier(
+        Guid supplierId,
+        CreatePriceListRequestBody request,
+        IMediator mediator,
+        HttpContext ctx,
+        CancellationToken ct)
+    {
+        var tenantId = GetTenantId(ctx);
+        if (tenantId == Guid.Empty) return Results.Unauthorized();
+
+        var command = new CreatePriceListCommand(
+            tenantId,
+            supplierId,
+            request.Currency,
+            request.ValidFrom,
+            request.ValidTo,
+            request.Entries.Select(e => new Application.Commands.CreatePriceList.PriceListEntryRequest(
+                e.MaterialCode, e.UnitPrice, e.MinQuantity, e.MaxQuantity)).ToList());
+
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return ResultToHttp.Map(result, id => Results.Created(
+            $"/api/procurement/suppliers/{supplierId}/price-list/{id}", new { id }));
+    }
+
+    private static async Task<IResult> UpdatePriceList(
+        Guid supplierId,
+        Guid id,
+        UpdatePriceListRequestBody request,
+        IMediator mediator,
+        HttpContext ctx,
+        CancellationToken ct)
+    {
+        var tenantId = GetTenantId(ctx);
+        if (tenantId == Guid.Empty) return Results.Unauthorized();
+
+        var command = new UpdatePriceListCommand(
+            tenantId,
+            id,
+            request.ValidFrom,
+            request.ValidTo,
+            request.Entries.Select(e => new Application.Commands.UpdatePriceList.PriceListEntryRequest(
+                e.MaterialCode, e.UnitPrice, e.MinQuantity, e.MaxQuantity)).ToList());
+
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return ResultToHttp.Map(result);
+    }
+
+    private static async Task<IResult> ActivatePriceListForSupplier(
+        Guid supplierId,
+        Guid id,
+        IMediator mediator,
+        HttpContext ctx,
+        CancellationToken ct)
+    {
+        var tenantId = GetTenantId(ctx);
+        if (tenantId == Guid.Empty) return Results.Unauthorized();
+
+        var result = await mediator.Send(
+            new ActivatePriceListCommand(tenantId, id, GetSub(ctx), GetRoles(ctx)), ct).ConfigureAwait(false);
+        return ResultToHttp.Map(result);
+    }
+
+    private static async Task<IResult> GetPriceListsBySupplier(
+        Guid supplierId,
+        IMediator mediator,
+        HttpContext ctx,
+        CancellationToken ct)
+    {
+        var tenantId = GetTenantId(ctx);
+        if (tenantId == Guid.Empty) return Results.Unauthorized();
+
+        var result = await mediator.Send(new GetPriceListsBySupplierQuery(tenantId, supplierId), ct).ConfigureAwait(false);
+        return ResultToHttp.Map(result);
+    }
+
     private static Guid GetTenantId(HttpContext ctx)
     {
         var claim = ctx.User?.FindFirst("tenant_id")?.Value ?? ctx.User?.FindFirst("tid")?.Value;
@@ -109,6 +196,17 @@ public sealed record PriceListEntryRequestBody(
 public sealed record CreatePriceListRequest(
     Guid SupplierId,
     string Currency,
+    DateOnly ValidFrom,
+    DateOnly? ValidTo,
+    IReadOnlyList<PriceListEntryRequestBody> Entries);
+
+public sealed record CreatePriceListRequestBody(
+    string Currency,
+    DateOnly ValidFrom,
+    DateOnly? ValidTo,
+    IReadOnlyList<PriceListEntryRequestBody> Entries);
+
+public sealed record UpdatePriceListRequestBody(
     DateOnly ValidFrom,
     DateOnly? ValidTo,
     IReadOnlyList<PriceListEntryRequestBody> Entries);

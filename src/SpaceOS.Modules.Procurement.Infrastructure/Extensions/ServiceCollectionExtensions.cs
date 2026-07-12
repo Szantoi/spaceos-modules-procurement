@@ -8,6 +8,7 @@ using SpaceOS.Modules.Procurement.Infrastructure.Adapters;
 using SpaceOS.Modules.Procurement.Infrastructure.Persistence;
 using SpaceOS.Modules.Procurement.Infrastructure.Repositories;
 using SpaceOS.Modules.Procurement.Infrastructure.Retention;
+using SpaceOS.Modules.Procurement.Infrastructure.Services;
 using SpaceOS.Modules.Procurement.Infrastructure.Workers;
 
 namespace SpaceOS.Modules.Procurement.Infrastructure.Extensions;
@@ -35,6 +36,7 @@ public static class ServiceCollectionExtensions
 
         // Domain services
         services.AddSingleton<IMatchPolicy, DefaultMatchPolicy>();
+        services.AddSingleton<IAsnHashService, AsnHashService>();
 
         // BE-P-10: worker uses dedicated BYPASSRLS connection string (no TenantSessionInterceptor)
         var workerConnectionString = Environment.GetEnvironmentVariable("ProcurementWorkerConnectionString");
