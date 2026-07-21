@@ -22,7 +22,7 @@ public static class ProcurementEndpoints
         group.MapGet("/suppliers", GetSuppliers);
         group.MapGet("/orders", GetOrders);
         group.MapPost("/orders", CreatePurchaseOrder);
-        group.MapGet("/orders/{id:guid}", GetOrderStatus);
+        group.MapGet("/orders/{id}", GetOrderStatus);
         group.MapGet("/prices", GetSupplierPrices);
         group.MapPost("/deliveries", RecordDelivery);
 
@@ -92,12 +92,19 @@ public static class ProcurementEndpoints
     }
 
     private static async Task<IResult> GetOrderStatus(
-        Guid id,
+        string id,
         IMediator mediator,
+        HttpContext ctx,
         CancellationToken ct)
     {
-        var result = await mediator.Send(new GetOrderStatusQuery(id), ct).ConfigureAwait(false);
-        return result.IsSuccess ? Results.Ok(result.Value) : Results.NotFound(result.Errors);
+        var tenantId = GetTenantId(ctx);
+        if (tenantId == Guid.Empty) return Results.Unauthorized();
+
+        if (!Guid.TryParse(id, out var orderId))
+            return Results.BadRequest(new { error = $"'{id}' is not a valid order id." });
+
+        var result = await mediator.Send(new GetOrderStatusQuery(tenantId, orderId), ct).ConfigureAwait(false);
+        return ResultToHttp.Map(result);
     }
 
     private static async Task<IResult> GetSupplierPrices(

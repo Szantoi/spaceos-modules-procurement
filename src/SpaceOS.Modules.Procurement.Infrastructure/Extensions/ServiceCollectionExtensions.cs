@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using SpaceOS.Modules.Procurement.Contracts.Providers;
 using SpaceOS.Modules.Procurement.Domain.Interfaces;
 using SpaceOS.Modules.Procurement.Domain.Services;
@@ -17,7 +19,8 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddProcurementInfrastructure(
         this IServiceCollection services,
-        string connectionString)
+        string connectionString,
+        IConfiguration configuration)
     {
         services.AddHttpContextAccessor();
         services.AddSingleton<TenantSessionInterceptor>();
@@ -49,6 +52,11 @@ public static class ServiceCollectionExtensions
             new ProcurementWorkerDbContextFactory(workerConnectionString));
 
         // Track D: outbox integration worker + HttpClient
+        // BE: base URL/path validated at startup — fail-fast instead of a silent localhost default.
+        services.AddOptions<ProcurementIntegrationOptions>()
+            .Bind(configuration.GetSection(ProcurementIntegrationOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
         services.AddHttpClient("inventory-internal");
         services.AddHostedService<ProcurementIntegrationWorker>();
 

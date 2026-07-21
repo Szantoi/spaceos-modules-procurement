@@ -1,9 +1,11 @@
 using System.Net;
+using System.Net.Http;
 using System.Text.Json;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using Moq.Protected;
 using SpaceOS.Modules.Procurement.Domain.Aggregates;
@@ -17,7 +19,7 @@ namespace SpaceOS.Modules.Procurement.Tests.Workers;
 /// Unit tests for ProcurementIntegrationWorker (Track D).
 /// Uses InMemory EF Core and a mocked HttpMessageHandler.
 /// </summary>
-public class ProcurementWorkerTests : IDisposable
+public class ProcurementIntegrationWorkerTests : IDisposable
 {
     private static readonly Guid TenantId = new("60000000-0000-0000-0000-000000000001");
     private static readonly Guid DeliveryId = Guid.NewGuid();
@@ -25,7 +27,7 @@ public class ProcurementWorkerTests : IDisposable
 
     private const string ValidSecret = "worker-test-secret";
 
-    public ProcurementWorkerTests()
+    public ProcurementIntegrationWorkerTests()
     {
         Environment.SetEnvironmentVariable("SPACEOS_INTERNAL_SECRET", ValidSecret);
     }
@@ -77,15 +79,27 @@ public class ProcurementWorkerTests : IDisposable
             idempotencyKey ?? DeliveryId,
             payloadJson ?? BuildPayload(tenantId));
 
+    private const string TestInventoryBaseUrl = "http://inventory-test.internal:8080";
+    private const string TestInventoryInboundPath = "/internal/inbound";
+
+    private static IOptions<ProcurementIntegrationOptions> BuildOptions(
+        string? baseUrl = null, string? path = null)
+        => Options.Create(new ProcurementIntegrationOptions
+        {
+            InventoryBaseUrl = baseUrl ?? TestInventoryBaseUrl,
+            InventoryInboundPath = path ?? TestInventoryInboundPath
+        });
+
     private static ProcurementIntegrationWorker BuildWorker(
         string dbName,
-        HttpMessageHandler httpHandler)
+        HttpMessageHandler httpHandler,
+        IOptions<ProcurementIntegrationOptions>? options = null)
     {
         var services = new ServiceCollection().AddLogging().BuildServiceProvider();
         var dbFactory = new TestWorkerDbContextFactory(dbName);
         var httpClientFactory = new MockHttpClientFactory(httpHandler);
         var logger = services.GetRequiredService<ILogger<ProcurementIntegrationWorker>>();
-        return new ProcurementIntegrationWorker(dbFactory, httpClientFactory, logger);
+        return new ProcurementIntegrationWorker(dbFactory, httpClientFactory, logger, options ?? BuildOptions());
     }
 
     private static HttpMessageHandler BuildHttpHandler(HttpStatusCode statusCode, string? body = null)
@@ -126,6 +140,65 @@ public class ProcurementWorkerTests : IDisposable
 
         var updated = await GetFreshMsgAsync(dbName, msg.Id);
         updated!.Status.Should().Be("Completed");
+    }
+
+    [Fact]
+    public async Task Worker_ShouldPostToConfiguredInventoryInboundUri()
+    {
+        // BE fix: request URI must come from options (InventoryBaseUrl + InventoryInboundPath),
+        // and the path must be the real Inventory route "/internal/inbound"
+        // (NOT the old hardcoded "/inventory/internal/inbound" mismatch).
+        var (db, dbName) = CreateInMemoryDb();
+        await using var _ = db;
+        var msg = CreatePendingOutboxMsg();
+        db.OutboxMessages.Add(msg);
+        await db.SaveChangesAsync();
+
+        Uri? capturedUri = null;
+        var mockHandler = new Mock<HttpMessageHandler>();
+        mockHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedUri = req.RequestUri)
+            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}") });
+
+        var worker = BuildWorker(dbName, mockHandler.Object,
+            BuildOptions(baseUrl: "http://inventory-test.internal:8080", path: "/internal/inbound"));
+        await RunOneCycleAsync(worker, CancellationToken.None);
+
+        capturedUri.Should().NotBeNull();
+        capturedUri!.ToString().Should().Be("http://inventory-test.internal:8080/internal/inbound");
+        capturedUri.AbsolutePath.Should().Be("/internal/inbound");
+        capturedUri.AbsolutePath.Should().NotContain("/inventory/internal/inbound");
+    }
+
+    [Fact]
+    public async Task Worker_ShouldTrimTrailingSlashOnBaseUrl_WhenBuildingRequestUri()
+    {
+        var (db, dbName) = CreateInMemoryDb();
+        await using var _ = db;
+        var msg = CreatePendingOutboxMsg();
+        db.OutboxMessages.Add(msg);
+        await db.SaveChangesAsync();
+
+        Uri? capturedUri = null;
+        var mockHandler = new Mock<HttpMessageHandler>();
+        mockHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedUri = req.RequestUri)
+            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}") });
+
+        // Trailing slash on the configured base URL must not produce a double slash.
+        var worker = BuildWorker(dbName, mockHandler.Object,
+            BuildOptions(baseUrl: "http://inventory-test.internal:8080/", path: "/internal/inbound"));
+        await RunOneCycleAsync(worker, CancellationToken.None);
+
+        capturedUri!.ToString().Should().Be("http://inventory-test.internal:8080/internal/inbound");
     }
 
     [Fact]

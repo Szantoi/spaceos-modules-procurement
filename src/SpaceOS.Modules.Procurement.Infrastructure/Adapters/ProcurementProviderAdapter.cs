@@ -41,14 +41,15 @@ public class ProcurementProviderAdapter : IProcurementProvider
 
     public async Task<PurchaseOrderDto> GetOrderStatusAsync(Guid orderId, CancellationToken ct = default)
     {
-        var result = await _mediator.Send(new GetOrderStatusQuery(orderId), ct).ConfigureAwait(false);
+        var tenantId = _tenantAccessor.TenantId;
+        var result = await _mediator.Send(new GetOrderStatusQuery(tenantId, orderId), ct).ConfigureAwait(false);
         if (!result.IsSuccess)
-            return new PurchaseOrderDto(orderId, Guid.Empty, Guid.Empty, "Unknown", 0m, "NotFound", null);
+            return new PurchaseOrderDto(orderId, tenantId, Guid.Empty, "Unknown", 0m, "NotFound", null);
 
         return new PurchaseOrderDto(
             result.Value.Id,
-            Guid.Empty,
-            Guid.Empty,
+            result.Value.TenantId,
+            result.Value.SupplierId,
             result.Value.MaterialType,
             result.Value.Quantity,
             result.Value.Status,

@@ -20,4 +20,13 @@
     <ProjectReference Include="../../src/SpaceOS.Modules.Procurement.Infrastructure/SpaceOS.Modules.Procurement.Infrastructure.csproj" />
     <ProjectReference Include="../../src/SpaceOS.Modules.Procurement.Api/SpaceOS.Modules.Procurement.Api.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- BE: several test classes (InternalReceiverTests, ProcurementIntegrationWorkerTests) mutate the
+         shared process-wide SPACEOS_INTERNAL_SECRET env var in their constructor/Dispose. xUnit runs
+         distinct test classes in parallel by default, which raced these two classes against each other
+         (flaky 401s). Disabling collection/assembly parallelization removes the race deterministically. -->
+    <None Update="xunit.runner.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>

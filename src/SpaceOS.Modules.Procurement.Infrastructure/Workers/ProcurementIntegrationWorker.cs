@@ -5,6 +5,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using SpaceOS.Modules.Procurement.Infrastructure.Persistence;
 
 namespace SpaceOS.Modules.Procurement.Infrastructure.Workers;
@@ -28,8 +29,6 @@ public sealed class ProcurementIntegrationWorker : BackgroundService
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(2);
     private const int MaxAttempts = 3;
     private const int LeaseDurationSeconds = 60;
-    private const string InventoryBaseUrl = "http://127.0.0.1:5004";
-    private const string InventoryInboundPath = "/inventory/internal/inbound";
     private const string InternalSecretEnvKey = "SPACEOS_INTERNAL_SECRET";
 
     // Circuit-breaker state
@@ -41,15 +40,18 @@ public sealed class ProcurementIntegrationWorker : BackgroundService
     private readonly IProcurementWorkerDbContextFactory _dbFactory;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<ProcurementIntegrationWorker> _logger;
+    private readonly ProcurementIntegrationOptions _options;
 
     public ProcurementIntegrationWorker(
         IProcurementWorkerDbContextFactory dbFactory,
         IHttpClientFactory httpClientFactory,
-        ILogger<ProcurementIntegrationWorker> logger)
+        ILogger<ProcurementIntegrationWorker> logger,
+        IOptions<ProcurementIntegrationOptions> options)
     {
         _dbFactory = dbFactory;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
+        _options = options.Value;
     }
 
     /// <inheritdoc/>
@@ -253,8 +255,9 @@ public sealed class ProcurementIntegrationWorker : BackgroundService
                 httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", $"Bearer {secret}");
                 httpClient.DefaultRequestHeaders.TryAddWithoutValidation("X-SpaceOS-TenantId", tenantId.ToString());
 
+                var requestUri = _options.InventoryBaseUrl.TrimEnd('/') + _options.InventoryInboundPath;
                 using var response = await httpClient
-                    .PostAsync(InventoryBaseUrl + InventoryInboundPath, content, ct)
+                    .PostAsync(requestUri, content, ct)
                     .ConfigureAwait(false);
 
                 // BE-P-08: idempotent 200 (dup) → success

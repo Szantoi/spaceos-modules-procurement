@@ -74,6 +74,47 @@ A service fut és válaszol, de `/healthz` 404-et ad. Ha szükséges, add hozzá
 
 ---
 
+## API kontraktus — GET /api/procurement/orders/{id} (WORLDS-PROC-BUILDFIX, 2026-07-21)
+
+`GetOrderStatusQuery(TenantId, OrderId)` → `GetOrderStatusQueryHandler` (application réteg,
+`IProcurementRepository` porton át — nincs közvetlen DbContext-elérés az endpointból).
+
+Response (`OrderStatusResponse`) — a jelenlegi **egysoros** `PurchaseOrder` valós mezői,
+**nincs `lines[]`** (a több-sortételes redesign W5, külön task):
+
+```jsonc
+{
+  "id": "guid",
+  "tenantId": "guid",
+  "supplierId": "guid",
+  "materialType": "string",
+  "quantity": 0,
+  "unitPrice": 0,
+  "currency": "HUF",
+  "status": "Draft|Submitted|Confirmed|Shipped|Delivered|Cancelled",
+  "expectedDelivery": "datetime?",
+  "createdAt": "datetime"
+}
+```
+
+Kontraktus: érvénytelen (nem parse-olható) `id` → **400**; ismeretlen vagy más tenant
+alá tartozó `id` → **404** (nincs cross-tenant existence-leak); auth hiány → 401.
+Tenant izoláció a modulban máshol is használt claim-alapú `GetTenantId(ctx)` mintával.
+
+### Worker: Inventory inbound route fix
+`ProcurementIntegrationWorker` az Inventory modul **valós** internal route-jára POST-ol:
+`/internal/inbound` (a korábbi `/inventory/internal/inbound` hibás volt — az Inventory oldali
+route-nak nincs `/inventory` prefixe, ld. `SpaceOS.Modules.Inventory.Api/Endpoints/ProcurementReceiverEndpoints.cs`).
+
+Base URL + path most **validált options-konfiguráció** (`ProcurementIntegrationOptions`,
+`appsettings.json` → `ProcurementIntegration` szekció, `ValidateDataAnnotations()` +
+`ValidateOnStart()`). `InventoryBaseUrl`-nek **nincs beégetett default** — kötelező konfigurálni
+(env var `ProcurementIntegration__InventoryBaseUrl`, appsettings-override vagy user-secrets),
+így a shipped/production default sosem localhost — hiányzó konfig esetén a host azonnal,
+fail-fast elszáll induláskor, nem néma hibás route-ra fut.
+
+---
+
 ## Stack
 - .NET 8, Clean Architecture + DDD + CQRS
 - PostgreSQL 16 schema: `spaceos_procurement`

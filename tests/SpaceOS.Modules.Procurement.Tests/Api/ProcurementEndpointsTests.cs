@@ -102,11 +102,17 @@ public class ProcurementEndpointsTests
         var mediatorMock = new Mock<IMediator>();
         mediatorMock.Setup(m => m.Send(It.IsAny<GetOrderStatusQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<OrderStatusResponse>.Success(
-                new OrderStatusResponse(orderId, "MDF 18mm", 100m, "Submitted", null)));
+                new OrderStatusResponse(
+                    orderId, TestAuthHandler.TestTenantId, Guid.NewGuid(),
+                    "MDF 18mm", 100m, 4000m, "HUF", "Submitted", null, DateTime.UtcNow)));
 
         var client = CreateAuthClient(mediatorMock);
         var response = await client.GetAsync($"/api/procurement/orders/{orderId}");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        mediatorMock.Verify(m => m.Send(
+            It.Is<GetOrderStatusQuery>(q => q.TenantId == TestAuthHandler.TestTenantId && q.OrderId == orderId),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -119,6 +125,44 @@ public class ProcurementEndpointsTests
         var client = CreateAuthClient(mediatorMock);
         var response = await client.GetAsync($"/api/procurement/orders/{Guid.NewGuid()}");
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task GetOrderStatus_InvalidGuid_Returns400()
+    {
+        // BE: malformed id must be distinguished from "unknown id" (404) — 400 instead.
+        var mediatorMock = new Mock<IMediator>();
+
+        var client = CreateAuthClient(mediatorMock);
+        var response = await client.GetAsync("/api/procurement/orders/not-a-guid");
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        mediatorMock.Verify(m => m.Send(It.IsAny<GetOrderStatusQuery>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetOrderStatus_WithoutAuth_Returns401()
+    {
+        var mediatorMock = new Mock<IMediator>();
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Services.AddSingleton(mediatorMock.Object);
+        builder.Services.AddAuthentication("NoAuth")
+            .AddScheme<AuthenticationSchemeOptions, NoAuthHandler>("NoAuth", _ => { });
+        builder.Services.AddAuthorization(opts =>
+            opts.AddPolicy("ManufacturerOnly", p => p.RequireAuthenticatedUser()));
+        builder.Services.AddRouting();
+        var app = builder.Build();
+        app.UseAuthentication();
+        app.UseAuthorization();
+        app.MapProcurementEndpoints();
+        await app.StartAsync();
+
+        var testServer = app.Services.GetRequiredService<IServer>() as TestServer;
+        var client = testServer!.CreateClient();
+
+        var response = await client.GetAsync($"/api/procurement/orders/{Guid.NewGuid()}");
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
