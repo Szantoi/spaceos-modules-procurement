@@ -25,18 +25,6 @@ public sealed class GetOrderStatusQueryHandler : IRequestHandler<GetOrderStatusQ
         if (order is null || order.TenantId != request.TenantId)
             return Result<OrderStatusResponse>.NotFound($"Purchase order {request.OrderId} not found.");
 
-        var response = new OrderStatusResponse(
-            order.Id,
-            order.TenantId,
-            order.SupplierId,
-            order.MaterialType,
-            order.Quantity,
-            order.UnitPrice,
-            order.Currency,
-            order.Status.ToString(),
-            order.ExpectedDeliveryDate,
-            order.CreatedAt);
-
-        return Result<OrderStatusResponse>.Success(response);
+        return Result<OrderStatusResponse>.Success(OrderStatusResponseFactory.FromOrder(order));
     }
 }

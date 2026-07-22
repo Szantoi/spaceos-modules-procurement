@@ -27,3 +27,23 @@ public sealed record OrderStatusResponse(
     string Status,
     DateTime? ExpectedDelivery,
     DateTime CreatedAt);
+
+/// <summary>
+/// WORLDS-PROC-PO-FSM: single mapping point from the <c>PurchaseOrder</c> aggregate to the
+/// wire DTO, shared by the read query and every FSM-transition command handler so the
+/// "fresh order DTO on success" response shape never drifts between endpoints.
+/// </summary>
+public static class OrderStatusResponseFactory
+{
+    public static OrderStatusResponse FromOrder(Domain.Aggregates.PurchaseOrder order) => new(
+        order.Id,
+        order.TenantId,
+        order.SupplierId,
+        order.MaterialType,
+        order.Quantity,
+        order.UnitPrice,
+        order.Currency,
+        order.Status.ToString(),
+        order.ExpectedDeliveryDate,
+        order.CreatedAt);
+}

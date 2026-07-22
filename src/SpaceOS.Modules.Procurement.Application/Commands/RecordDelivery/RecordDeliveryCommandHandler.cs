@@ -4,6 +4,7 @@ using MediatR;
 using SpaceOS.Modules.Inventory.Contracts.Dtos;
 using SpaceOS.Modules.Inventory.Contracts.Providers;
 using SpaceOS.Modules.Procurement.Domain.Aggregates;
+using SpaceOS.Modules.Procurement.Domain.Enums;
 using SpaceOS.Modules.Procurement.Domain.Interfaces;
 
 namespace SpaceOS.Modules.Procurement.Application.Commands.RecordDelivery;
@@ -30,8 +31,30 @@ public sealed class RecordDeliveryCommandHandler : IRequestHandler<RecordDeliver
         if (order is null)
             return Result.NotFound($"Purchase order {request.PurchaseOrderId} not found.");
 
-        order.MarkShipped();
-        order.RecordDelivery(request.ReceivedQuantity);
+        try
+        {
+            // WORLDS-PROC-PO-FSM: this handler historically combined the Confirmed→Shipped
+            // and Shipped→Delivered transitions into one call (no dedicated "mark shipped"
+            // endpoint existed). Now that MarkPurchaseOrderShippedCommand can persist the
+            // Shipped state on its own, only perform this step if it is still pending —
+            // otherwise MarkShipped() would throw on an order that is already Shipped.
+            // RecordDelivery() itself remains the sole authority on Shipped→Delivered legality.
+            if (order.Status == PurchaseOrderStatus.Confirmed)
+            {
+                order.MarkShipped();
+            }
+
+            order.RecordDelivery(request.ReceivedQuantity);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Same idempotency mechanism as the FSM-transition endpoints: a repeat of the
+            // exact same delivery request (or any call against an order that's not Shipped)
+            // hits the aggregate's own guard and is rejected here — no duplicate
+            // PurchaseOrderDeliveredEvent, no duplicate outbox row, no duplicate inbound booking.
+            return Result.Conflict(ex.Message);
+        }
+
         order.PopDomainEvents();
 
         var delivery = Delivery.Record(

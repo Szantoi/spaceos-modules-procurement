@@ -2,9 +2,13 @@ using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using SpaceOS.Modules.Procurement.Application.Commands.CancelPurchaseOrder;
+using SpaceOS.Modules.Procurement.Application.Commands.ConfirmPurchaseOrder;
 using SpaceOS.Modules.Procurement.Application.Commands.CreatePurchaseOrder;
 using SpaceOS.Modules.Procurement.Application.Commands.CreateSupplier;
+using SpaceOS.Modules.Procurement.Application.Commands.MarkPurchaseOrderShipped;
 using SpaceOS.Modules.Procurement.Application.Commands.RecordDelivery;
+using SpaceOS.Modules.Procurement.Application.Commands.SubmitPurchaseOrder;
 using SpaceOS.Modules.Procurement.Application.Queries.GetOrders;
 using SpaceOS.Modules.Procurement.Application.Queries.GetOrderStatus;
 using SpaceOS.Modules.Procurement.Application.Queries.GetSupplierPrices;
@@ -25,6 +29,14 @@ public static class ProcurementEndpoints
         group.MapGet("/orders/{id}", GetOrderStatus);
         group.MapGet("/prices", GetSupplierPrices);
         group.MapPost("/deliveries", RecordDelivery);
+
+        // WORLDS-PROC-PO-FSM: portal-usable PurchaseOrder transitions. Exact paths —
+        // see docs/knowledge/architecture: PO_FSM_API.md (module-local contract doc).
+        group.MapPost("/orders/{id}/submit", SubmitPurchaseOrder);
+        group.MapPost("/orders/{id}/confirm", ConfirmPurchaseOrder);
+        group.MapPost("/orders/{id}/ship", MarkPurchaseOrderShipped);
+        group.MapPost("/orders/{id}/deliver", DeliverPurchaseOrder);
+        group.MapPost("/orders/{id}/cancel", CancelPurchaseOrder);
 
         return app;
     }
@@ -107,6 +119,105 @@ public static class ProcurementEndpoints
         return ResultToHttp.Map(result);
     }
 
+    private static async Task<IResult> SubmitPurchaseOrder(
+        string id,
+        IMediator mediator,
+        HttpContext ctx,
+        CancellationToken ct)
+    {
+        var tenantId = GetTenantId(ctx);
+        if (tenantId == Guid.Empty) return Results.Unauthorized();
+
+        if (!Guid.TryParse(id, out var orderId))
+            return Results.BadRequest(new { error = $"'{id}' is not a valid order id." });
+
+        var result = await mediator.Send(new SubmitPurchaseOrderCommand(tenantId, orderId), ct).ConfigureAwait(false);
+        return ResultToHttp.Map(result);
+    }
+
+    private static async Task<IResult> ConfirmPurchaseOrder(
+        string id,
+        IMediator mediator,
+        HttpContext ctx,
+        CancellationToken ct)
+    {
+        var tenantId = GetTenantId(ctx);
+        if (tenantId == Guid.Empty) return Results.Unauthorized();
+
+        if (!Guid.TryParse(id, out var orderId))
+            return Results.BadRequest(new { error = $"'{id}' is not a valid order id." });
+
+        var result = await mediator.Send(new ConfirmPurchaseOrderCommand(tenantId, orderId), ct).ConfigureAwait(false);
+        return ResultToHttp.Map(result);
+    }
+
+    private static async Task<IResult> MarkPurchaseOrderShipped(
+        string id,
+        IMediator mediator,
+        HttpContext ctx,
+        CancellationToken ct)
+    {
+        var tenantId = GetTenantId(ctx);
+        if (tenantId == Guid.Empty) return Results.Unauthorized();
+
+        if (!Guid.TryParse(id, out var orderId))
+            return Results.BadRequest(new { error = $"'{id}' is not a valid order id." });
+
+        var result = await mediator.Send(new MarkPurchaseOrderShippedCommand(tenantId, orderId), ct).ConfigureAwait(false);
+        return ResultToHttp.Map(result);
+    }
+
+    private static async Task<IResult> CancelPurchaseOrder(
+        string id,
+        IMediator mediator,
+        HttpContext ctx,
+        CancellationToken ct)
+    {
+        var tenantId = GetTenantId(ctx);
+        if (tenantId == Guid.Empty) return Results.Unauthorized();
+
+        if (!Guid.TryParse(id, out var orderId))
+            return Results.BadRequest(new { error = $"'{id}' is not a valid order id." });
+
+        var result = await mediator.Send(new CancelPurchaseOrderCommand(tenantId, orderId), ct).ConfigureAwait(false);
+        return ResultToHttp.Map(result);
+    }
+
+    /// <summary>
+    /// WORLDS-PROC-PO-FSM: portal-facing wrapper for the Shipped → Delivered transition.
+    /// Reuses <see cref="RecordDeliveryCommand"/> / <see cref="RecordDeliveryCommandHandler"/>
+    /// unchanged (same outbox + inventory-inbound transaction) — this endpoint only adds the
+    /// route-per-aggregate shape (<c>/orders/{id}/deliver</c>) and, on success, fetches the
+    /// fresh order DTO so every transition endpoint in this group has the same response contract.
+    /// </summary>
+    private static async Task<IResult> DeliverPurchaseOrder(
+        string id,
+        DeliverPurchaseOrderRequest request,
+        IMediator mediator,
+        HttpContext ctx,
+        CancellationToken ct)
+    {
+        var tenantId = GetTenantId(ctx);
+        if (tenantId == Guid.Empty) return Results.Unauthorized();
+
+        if (!Guid.TryParse(id, out var orderId))
+            return Results.BadRequest(new { error = $"'{id}' is not a valid order id." });
+
+        var command = new RecordDeliveryCommand(
+            tenantId,
+            orderId,
+            request.ReceivedQuantity,
+            request.Notes,
+            request.RecordedBy ?? "system");
+
+        var deliverResult = await mediator.Send(command, ct).ConfigureAwait(false);
+        if (!deliverResult.IsSuccess)
+            return ResultToHttp.Map(deliverResult);
+
+        var freshOrder = await mediator.Send(new GetOrderStatusQuery(tenantId, orderId), ct).ConfigureAwait(false);
+        return ResultToHttp.Map(freshOrder);
+    }
+
     private static async Task<IResult> GetSupplierPrices(
         string? materialType,
         IMediator mediator,
@@ -159,6 +270,12 @@ public sealed record CreatePurchaseOrderRequest(
 
 public sealed record RecordDeliveryRequest(
     Guid PurchaseOrderId,
+    decimal ReceivedQuantity,
+    string? Notes,
+    string? RecordedBy);
+
+/// <summary>Body for <c>POST /api/procurement/orders/{id}/deliver</c> — the order id is the route param.</summary>
+public sealed record DeliverPurchaseOrderRequest(
     decimal ReceivedQuantity,
     string? Notes,
     string? RecordedBy);
